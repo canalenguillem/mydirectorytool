@@ -16,3 +16,14 @@ Panel privado para gestionar restaurantes, generar artículos e imágenes y publ
 4. Abre `http://localhost:8091`.
 
 Los archivos `.env`, bases de datos, imágenes y artículos generados están excluidos de Git.
+
+## Documentación
+
+La definición funcional y técnica del proyecto está en [`docs/`](docs/README.md):
+
+- Visión del producto multidirectorio.
+- Estado actual y funcionalidades terminadas.
+- Arquitectura y modelo de datos.
+- Operación segura de búsquedas y publicaciones.
+- Estrategia SEO y páginas geográficas.
+- Hoja de ruta hacia una plataforma reutilizable.
