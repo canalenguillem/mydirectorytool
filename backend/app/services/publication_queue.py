@@ -208,7 +208,6 @@ def _claim_next() -> str | None:
 def _run_pipeline(place_id: str) -> None:
     from app.api.blog import full_publish
     from app.models.database import (
-        enrich_place_details,
         get_all_images_for_place,
         get_or_create_article,
         get_or_create_review_info,
@@ -216,11 +215,6 @@ def _run_pipeline(place_id: str) -> None:
     from app.services.featured_image import set_featured_image
     from app.services.openai_writer import generar_articulo_blog
     from app.services.place_images import download_all_place_photos
-
-    # Los lugares guardados antes de incorporar los campos estructurados no
-    # tienen ubicación ni contacto. Una única llamada Details, espaciada por
-    # el propio intervalo de la cola, los completa antes de generar/publicar.
-    enrich_place_details(place_id)
 
     info = get_or_create_review_info(place_id)
     get_or_create_article(info, "es", generar_articulo_blog)

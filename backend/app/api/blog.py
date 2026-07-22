@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.models.database import get_article_data, marcar_publicado
+from app.models.database import enrich_place_details, get_article_data, marcar_publicado
 from app.services.wordpress import publicar_article_restaurante, guardar_campos_acf, get_or_create_category
 from app.services.comida_classifier import detectar_tipo_comida
 from app.services.openai_writer import generar_excerpt
@@ -37,6 +37,11 @@ def acf_fields_from_data(data: dict) -> dict:
 
 @router.post("/blog/publish")
 def publicar_article(place_id: str):
+    try:
+        enrich_place_details(place_id)
+    except Exception as exc:
+        return {"error": f"No se pudieron completar los datos del restaurante: {exc}"}
+
     data = get_article_data(place_id)
     if not data:
         return {"error": "No se encontró el artículo"}
@@ -151,7 +156,6 @@ def borrar_article_y_fotos_wordpress(place_id: str):
     }
 
 
-from app.models.database import get_article_data, marcar_publicado
 from app.services.wordpress import publicar_article_restaurante, guardar_campos_acf, get_or_create_category
 from app.services.comida_classifier import detectar_tipo_comida
 from app.services.openai_writer import generar_excerpt
@@ -214,6 +218,11 @@ def pujar_i_associar_imatges_addicionals(place_id, post_id):
 
 @router.post("/blog/full-publish")
 def full_publish(place_id: str):
+    try:
+        enrich_place_details(place_id)
+    except Exception as exc:
+        return {"error": f"No se pudieron completar los datos del restaurante: {exc}"}
+
     data = get_article_data(place_id)
     if not data:
         return {"error": f"No s'ha trobat article per {place_id}"}
