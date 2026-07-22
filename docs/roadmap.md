@@ -27,11 +27,15 @@ Resultado: un pipeline fiable que puede operar durante días sin supervisión co
 
 ## Fase 2: estructura pública del directorio
 
-- Crear taxonomía o contenido de localidad en WordPress.
+- Crear un plugin propio para CPT, taxonomías y Schema.org.
+- Registrar municipio, provincia y tipo de comida como taxonomías.
+- Crear un tema hijo para las plantillas del directorio.
 - Generar páginas de ciudad como borradores.
 - Listar restaurantes dinámicamente.
 - Crear enlazado bidireccional.
-- Añadir Schema.org.
+- Añadir plantillas `single-restaurante.php`, `archive-restaurante.php` y
+  `taxonomy-municipio.php` con tarjetas reutilizables.
+- Añadir mapas, llamadas a la acción y metadatos Open Graph.
 - Generar sitemap geográfico.
 - Incorporar páginas regionales cuando haya suficiente cobertura.
 

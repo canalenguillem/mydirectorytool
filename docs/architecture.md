@@ -122,3 +122,11 @@ Cuando aumenten volumen y proyectos:
 - Añadir auditoría de acciones y publicaciones.
 - Aplicar rate limiting y permisos por usuario.
 - Añadir tests de contratos para Google, OpenAI y WordPress.
+
+## Frontera con WordPress
+
+La herramienta gestiona datos, generación y publicación; un plugin propio
+mantiene el modelo público del directorio (CPT, taxonomías y Schema.org); y un
+tema hijo controla las plantillas y el diseño. La decisión completa y el orden
+de implementación están documentados en
+[Arquitectura de WordPress](wordpress-integration.md).
