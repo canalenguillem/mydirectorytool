@@ -230,15 +230,20 @@ function PlaceCard({ place, onRefresh }: { place: Place; onRefresh: () => void }
   )
 }
 
-function SearchResultCard({ result, onSaved }: { result: SearchResult; onSaved: () => void }) {
+function SearchResultCard({ result, saved, onSaved }: { result: SearchResult; saved: boolean; onSaved: (placeId: string) => void }) {
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   const handleSave = async () => {
+    if (saved) return
     setSaving(true)
+    setError('')
     try {
-      await api.reviews(result.place_id)
-      onSaved()
-    } catch {
+      await api.savePlace(result.place_id)
+      onSaved(result.place_id)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
       setSaving(false)
     }
   }
@@ -250,14 +255,17 @@ function SearchResultCard({ result, onSaved }: { result: SearchResult; onSaved: 
         <p className="text-xs text-gray-500 mt-0.5 truncate">{result.address}</p>
         <StarRating rating={result.rating} />
       </div>
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded-lg disabled:opacity-60 flex items-center gap-1"
-      >
-        {saving && <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-        Guardar
-      </button>
+      <div className="shrink-0 text-right">
+        <button
+          onClick={handleSave}
+          disabled={saving || saved}
+          className={`text-xs px-3 py-2 rounded-lg flex items-center gap-1 ${saved ? 'bg-green-100 text-green-800' : 'bg-blue-600 hover:bg-blue-700 text-white'} disabled:opacity-70`}
+        >
+          {saving && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+          {saved ? 'Guardado ✓' : 'Guardar'}
+        </button>
+        {error && <p className="text-[10px] text-red-600 mt-1 max-w-32">{error}</p>}
+      </div>
     </div>
   )
 }
@@ -414,6 +422,7 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
   const [places, setPlaces] = useState<Place[]>([])
   const [loadingPlaces, setLoadingPlaces] = useState(true)
   const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'published'>('all')
+  const [savedPlaceIds, setSavedPlaceIds] = useState<Set<string>>(new Set())
   const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null)
   const [queueBusy, setQueueBusy] = useState(false)
   const [queueError, setQueueError] = useState('')
@@ -422,6 +431,7 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
     try {
       const res = await api.saved()
       setPlaces(res.guardats)
+      setSavedPlaceIds(new Set(res.guardats.map(place => place.place_id)))
     } finally {
       setLoadingPlaces(false)
     }
@@ -536,7 +546,11 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
                 <SearchResultCard
                   key={r.place_id}
                   result={r}
-                  onSaved={() => { loadPlaces(); setSearchResults([]) }}
+                  saved={savedPlaceIds.has(r.place_id)}
+                  onSaved={placeId => {
+                    setSavedPlaceIds(previous => new Set(previous).add(placeId))
+                    loadPlaces()
+                  }}
                 />
               ))}
             </div>

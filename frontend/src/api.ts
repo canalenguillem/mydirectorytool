@@ -43,6 +43,9 @@ export const api = {
   saved: () =>
     req<{ guardats: import('./types').Place[] }>('/places/saved'),
 
+  savePlace: (place_id: string) =>
+    req<{ message: string; place: import('./types').Place }>(`/places/save?place_id=${encodeURIComponent(place_id)}`, { method: 'POST' }),
+
   reviews: (place_id: string) =>
     req<{ message: string }>(`/places/reviews?place_id=${place_id}`),
 

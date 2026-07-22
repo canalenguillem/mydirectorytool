@@ -22,6 +22,22 @@ def init_db():
     )
     """)
 
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS search_result (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        search_id INTEGER NOT NULL,
+        name TEXT,
+        address TEXT,
+        place_id TEXT NOT NULL,
+        rating REAL,
+        postal_code TEXT,
+        phone TEXT,
+        website TEXT,
+        UNIQUE(search_id, place_id),
+        FOREIGN KEY(search_id) REFERENCES search(id)
+    )
+    """)
+
     # Taula de llocs trobats
     c.execute("""
     CREATE TABLE IF NOT EXISTS place (
@@ -146,13 +162,24 @@ def get_or_create_search(query):
         search_id = row[0]
         c.execute("""
             SELECT name, address, place_id, rating, postal_code, phone, website
-            FROM place
+            FROM search_result
             WHERE search_id = ?
         """, (search_id,))
         places = [
             dict(zip(["name", "address", "place_id", "rating", "postal_code", "phone", "website"], r))
             for r in c.fetchall()
         ]
+        # Compatibilidad con búsquedas creadas antes de separar resultados y
+        # lugares guardados. Se eliminará cuando todas hayan sido migradas.
+        if not places:
+            c.execute("""
+                SELECT name, address, place_id, rating, postal_code, phone, website
+                FROM place WHERE search_id = ?
+            """, (search_id,))
+            places = [
+                dict(zip(["name", "address", "place_id", "rating", "postal_code", "phone", "website"], r))
+                for r in c.fetchall()
+            ]
         conn.close()
         return places
     else:
@@ -171,7 +198,7 @@ def get_or_create_search(query):
             website = extra.get("website", "")
 
             c.execute("""
-                INSERT OR IGNORE INTO place (
+                INSERT OR IGNORE INTO search_result (
                     search_id, name, address, place_id, rating,
                     postal_code, phone, website
                 )
@@ -190,6 +217,35 @@ def get_or_create_search(query):
         conn.commit()
         conn.close()
         return get_or_create_search(query)
+
+
+def save_search_result(place_id: str):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("""
+        SELECT search_id, name, address, place_id, rating, postal_code, phone, website
+        FROM search_result
+        WHERE place_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+    """, (place_id,)).fetchone()
+    if not row:
+        conn.close()
+        return None
+
+    existing = conn.execute(
+        "SELECT 1 FROM place WHERE place_id = ? LIMIT 1", (place_id,)
+    ).fetchone()
+    if not existing:
+        conn.execute("""
+            INSERT INTO place (
+                search_id, name, address, place_id, rating,
+                postal_code, phone, website
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, tuple(row))
+        conn.commit()
+    conn.close()
+    return dict(row)
 
 def list_all_places():
     conn = sqlite3.connect(DB_PATH)
@@ -503,7 +559,6 @@ def get_all_images_for_place(place_id: str) -> list[str]:
     rows = c.fetchall()
     conn.close()
     return [r[0] for r in rows]
-
 
 
 

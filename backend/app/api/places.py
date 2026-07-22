@@ -30,6 +30,17 @@ def list_saved_places():
     return {"guardats": list_all_places()}
 
 
+@router.post("/save")
+def save_place(place_id: str):
+    from fastapi import HTTPException
+    from app.models.database import save_search_result
+
+    place = save_search_result(place_id)
+    if not place:
+        raise HTTPException(status_code=404, detail="Resultado de búsqueda no encontrado")
+    return {"message": "Restaurante guardado", "place": place}
+
+
 @router.get("/reviews")
 def fetch_and_save_reviews(place_id: str):
     from app.services.google_places import get_reviews
@@ -213,7 +224,6 @@ def delete_place_complet(place_id: str):
     conn.close()
 
     return {"message": f"S'ha eliminat completament {nom} ({place_id}) de la base de dades"}
-
 
 
 
