@@ -1,0 +1,37 @@
+# Data volumes (persistent, not in git)
+data/images/
+data/articles/
+data/exports/
+data/places.db
+
+# Env files
+backend/.env
+backend/.env.auth
+frontend/.env
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Old structure (before restructure)
+/app/
+/articles/
+/images/
+/exports/
+places.db
+*.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+notes2.txt
