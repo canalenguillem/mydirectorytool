@@ -311,10 +311,20 @@ def get_or_create_article(info: dict, lang: str, generator_func):
     c.execute("SELECT path FROM blog_article WHERE place_id = ? AND lang = ?", (info["place_id"], lang))
     row = c.fetchone()
 
-    if row:
+    if row and os.path.exists(row[0]):
         path = row[0]
         with open(path, "r", encoding="utf-8") as f:
             return f.read()
+
+    # Algunas filas antiguas apuntan a la estructura previa (`articles/`).
+    # Si el archivo ya no existe, eliminamos solo el registro huérfano para
+    # poder regenerarlo bajo DATA_DIR/articles.
+    if row:
+        c.execute(
+            "DELETE FROM blog_article WHERE place_id = ? AND lang = ?",
+            (info["place_id"], lang),
+        )
+        conn.commit()
 
     # Si no existeix, generar i desar
     article = generator_func(info, lang)
@@ -493,7 +503,6 @@ def get_all_images_for_place(place_id: str) -> list[str]:
     rows = c.fetchall()
     conn.close()
     return [r[0] for r in rows]
-
 
 
 

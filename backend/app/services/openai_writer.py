@@ -1,9 +1,56 @@
+import hashlib
+import re
+
 from openai import OpenAI
 from decouple import config
 
 client = OpenAI(api_key=config("OPENAI_API_KEY"))
 
+
+TITLE_PATTERNS = (
+    "{name}: guía honesta para comer bien en {locality}",
+    "Qué pedir en {name} y por qué merece una visita",
+    "{name}, una mesa con personalidad propia en {locality}",
+    "Comer en {name}: lo que conviene saber antes de ir",
+    "{name}: cocina, ambiente y opiniones sin rodeos",
+    "Una comida en {name}: así es la experiencia",
+    "{name} bajo la lupa: carta, servicio y ambiente",
+    "Dónde comer en {locality}: una visita a {name}",
+    "{name}: razones para reservar mesa en {locality}",
+    "Así se come en {name}: una guía basada en sus clientes",
+    "{name}, más allá de la carta: qué puedes esperar",
+    "¿Vale la pena comer en {name}? Esto dicen sus clientes",
+    "{name}: una parada gastronómica para recordar",
+    "Antes de visitar {name}: platos, ambiente y consejos",
+    "{name} en {locality}: una experiencia contada al detalle",
+    "La experiencia {name}: del primer plato al último detalle",
+    "{name}: dónde el ambiente también forma parte del menú",
+    "Lo mejor de {name}, según quienes ya se han sentado a su mesa",
+    "{name}: una propuesta gastronómica con sello propio",
+    "Guía de {name}: qué encontrarás al sentarte a la mesa",
+)
+
+
+def generar_titulo_unico(info: dict) -> str:
+    name = " ".join(str(info.get("name") or "Restaurante").split())
+    locality = " ".join(str(info.get("locality") or "la zona").split())
+    if "balear" in locality.lower():
+        locality = "Mallorca"
+    stable_key = str(info.get("place_id") or name)
+    index = int(hashlib.sha256(stable_key.encode()).hexdigest()[:8], 16) % len(TITLE_PATTERNS)
+    return TITLE_PATTERNS[index].format(name=name, locality=locality)
+
+
+def aplicar_titulo(article: str, title: str) -> str:
+    article = article.strip()
+    article = re.sub(r"^```(?:markdown)?\s*", "", article, flags=re.IGNORECASE)
+    article = re.sub(r"\s*```$", "", article)
+    if re.search(r"^#\s+.+$", article, flags=re.MULTILINE):
+        return re.sub(r"^#\s+.+$", f"# {title}", article, count=1, flags=re.MULTILINE)
+    return f"# {title}\n\n{article}"
+
 def generar_articulo_blog(info: dict, idioma: str = "es"):
+    title = generar_titulo_unico(info)
     prompt = f"""
 Eres un redactor profesional experto en SEO y redacción web. Escribe un artículo muy completo y extenso (mínimo **1200 palabras**) en {idioma} sobre el siguiente negocio gastronómico local.
 
@@ -13,15 +60,10 @@ Resuelve las principales intenciones de búsqueda teniendo en cuenta la poblaci�
 
 📝 El artículo debe incluir detalles ricos y variados, anécdotas, contexto histórico o cultural si es relevante, y descripciones sensoriales. Usa párrafos desarrollados y evita repeticiones.
 
-🎯 El título debe ser **único, atractivo y original**. Varía la estructura del título en cada artículo usando distintos enfoques:
-- Pregunta directa: “¿Por qué todo el mundo habla de [Nombre]?”
-- Afirmación de contraste: “[Nombre]: cocina de mercado sin pretensiones en [Localidad]”
-- Número o dato: “5 razones para cenar en [Nombre] esta semana”
-- Nombre propio como protagonista: “[Nombre], el refugio mallorquín que no sale en las guías”
-- Imperativo: “Come en [Nombre] antes de que lo descubra todo el mundo”
-- Descripción sensorial: “Paella con vistas al mar y sin trampa: así es [Nombre]”
+🎯 La primera línea debe ser exactamente este título, precedido por `# `:
+{title}
 
-⛔️ PROHIBIDO en el título: “Los Sabores de”, “Sabores Auténticos”, “Descubre”, “Oasis”, “Paraíso gastronómico”, “Viaje gastronómico”, “Un Rincón”, “La Magia de”, “Un Bocado de”.
+No inventes otro título, no lo reformules y no envuelvas el artículo en bloques de código.
 ⛔️ Si el restaurante está en las Islas Baleares, especifica siempre la isla exacta (Mallorca, Menorca, Ibiza o Formentera), nunca “Islas Baleares” a secas.
 
 
@@ -68,7 +110,7 @@ No uses listas numeradas ni etiquetas HTML. Todo debe estar en formato Markdown 
         messages=[{"role": "user", "content": prompt}],
         temperature=0.9,
     )
-    return response.choices[0].message.content
+    return aplicar_titulo(response.choices[0].message.content, title)
 
 
 
