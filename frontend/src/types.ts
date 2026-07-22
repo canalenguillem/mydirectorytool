@@ -10,6 +10,18 @@ export interface Place {
   wp_post_id?: number
   article_path?: string
   tipo_de_comida?: string
+  country?: string
+  country_code?: string
+  region?: string
+  province?: string
+  municipality?: string
+  city?: string
+  district?: string
+  latitude?: number
+  longitude?: number
+  email?: string
+  email_source?: string
+  business_status?: string
 }
 
 export interface SearchResult {
@@ -20,6 +32,18 @@ export interface SearchResult {
   postal_code?: string
   phone?: string
   website?: string
+  country?: string
+  country_code?: string
+  region?: string
+  province?: string
+  municipality?: string
+  city?: string
+  district?: string
+  latitude?: number
+  longitude?: number
+  email?: string
+  email_source?: string
+  business_status?: string
 }
 
 export interface QueueError {

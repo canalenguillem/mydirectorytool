@@ -40,6 +40,14 @@ def publicar_article(place_id: str):
         "telefono": data.get("phone", ""),
         "web": data.get("website", ""),
         "codigo_postal": data.get("postal_code", ""),
+        "email": data.get("email", ""),
+        "ciudad": data.get("city", ""),
+        "municipio": data.get("municipality", ""),
+        "provincia": data.get("province", ""),
+        "region": data.get("region", ""),
+        "pais": data.get("country", ""),
+        "latitud": data.get("latitude"),
+        "longitud": data.get("longitude"),
         "tipo_de_comida": data.get("tipo_de_comida", ""),
         "place_id": data.get("place_id", "")
 
@@ -228,6 +236,14 @@ def full_publish(place_id: str):
         "telefono": data.get("phone", ""),
         "web": data.get("website", ""),
         "codigo_postal": data.get("postal_code", ""),
+        "email": data.get("email", ""),
+        "ciudad": data.get("city", ""),
+        "municipio": data.get("municipality", ""),
+        "provincia": data.get("province", ""),
+        "region": data.get("region", ""),
+        "pais": data.get("country", ""),
+        "latitud": data.get("latitude"),
+        "longitud": data.get("longitude"),
         "tipo_de_comida": data.get("tipo_de_comida", ""),
         "place_id": data.get("place_id", "")
     })

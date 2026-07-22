@@ -2,12 +2,33 @@ import sqlite3
 import hashlib
 import json
 from app.services.google_places import buscar_lugares
-from app.services.google_places import get_postal_code
-
-
 import os
+import time
+
 DATA_DIR = os.environ.get("DATA_DIR", ".")
 DB_PATH = os.path.join(DATA_DIR, "places.db")
+
+LOCATION_COLUMNS = {
+    "country": "TEXT",
+    "country_code": "TEXT",
+    "region": "TEXT",
+    "province": "TEXT",
+    "municipality": "TEXT",
+    "city": "TEXT",
+    "district": "TEXT",
+    "latitude": "REAL",
+    "longitude": "REAL",
+    "email": "TEXT",
+    "email_source": "TEXT",
+    "business_status": "TEXT",
+}
+
+
+def _ensure_columns(cursor, table: str, columns: dict[str, str]):
+    existing = {row[1] for row in cursor.execute(f"PRAGMA table_info({table})")}
+    for name, column_type in columns.items():
+        if name not in existing:
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {name} {column_type}")
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -33,6 +54,18 @@ def init_db():
         postal_code TEXT,
         phone TEXT,
         website TEXT,
+        country TEXT,
+        country_code TEXT,
+        region TEXT,
+        province TEXT,
+        municipality TEXT,
+        city TEXT,
+        district TEXT,
+        latitude REAL,
+        longitude REAL,
+        email TEXT,
+        email_source TEXT,
+        business_status TEXT,
         UNIQUE(search_id, place_id),
         FOREIGN KEY(search_id) REFERENCES search(id)
     )
@@ -54,9 +87,24 @@ def init_db():
         publicado_en_wp INTEGER DEFAULT 0,
         wp_post_id INTEGER,
         tipo_de_comida TEXT,
+        country TEXT,
+        country_code TEXT,
+        region TEXT,
+        province TEXT,
+        municipality TEXT,
+        city TEXT,
+        district TEXT,
+        latitude REAL,
+        longitude REAL,
+        email TEXT,
+        email_source TEXT,
+        business_status TEXT,
         FOREIGN KEY(search_id) REFERENCES search(id)
     )
     """)
+
+    _ensure_columns(c, "search_result", LOCATION_COLUMNS)
+    _ensure_columns(c, "place", LOCATION_COLUMNS)
 
     # Ressenyes individuals
     c.execute("""
@@ -161,23 +209,27 @@ def get_or_create_search(query):
         print(f"dins if row {row[0]}")
         search_id = row[0]
         c.execute("""
-            SELECT name, address, place_id, rating, postal_code, phone, website
+            SELECT name, address, place_id, rating, postal_code, phone, website,
+                   country, country_code, region, province, municipality, city,
+                   district, latitude, longitude, email, email_source, business_status
             FROM search_result
             WHERE search_id = ?
         """, (search_id,))
         places = [
-            dict(zip(["name", "address", "place_id", "rating", "postal_code", "phone", "website"], r))
+            dict(zip(["name", "address", "place_id", "rating", "postal_code", "phone", "website", "country", "country_code", "region", "province", "municipality", "city", "district", "latitude", "longitude", "email", "email_source", "business_status"], r))
             for r in c.fetchall()
         ]
         # Compatibilidad con búsquedas creadas antes de separar resultados y
         # lugares guardados. Se eliminará cuando todas hayan sido migradas.
         if not places:
             c.execute("""
-                SELECT name, address, place_id, rating, postal_code, phone, website
+                SELECT name, address, place_id, rating, postal_code, phone, website,
+                       country, country_code, region, province, municipality, city,
+                       district, latitude, longitude, email, email_source, business_status
                 FROM place WHERE search_id = ?
             """, (search_id,))
             places = [
-                dict(zip(["name", "address", "place_id", "rating", "postal_code", "phone", "website"], r))
+                dict(zip(["name", "address", "place_id", "rating", "postal_code", "phone", "website", "country", "country_code", "region", "province", "municipality", "city", "district", "latitude", "longitude", "email", "email_source", "business_status"], r))
                 for r in c.fetchall()
             ]
         conn.close()
@@ -189,30 +241,56 @@ def get_or_create_search(query):
         c.execute("INSERT INTO search (query, query_hash) VALUES (?, ?)", (query, query_hash))
         search_id = c.lastrowid
 
-        from app.services.google_places import get_postal_code, get_extra_details
+        from app.services.google_places import get_contact_and_location
+
+        details_delay = float(os.environ.get("GOOGLE_DETAILS_DELAY_SECONDS", "0.25"))
 
         for lugar in lugares:
-            postal = get_postal_code(lugar["place_id"])
-            extra = get_extra_details(lugar["place_id"])
-            phone = extra.get("phone", "")
-            website = extra.get("website", "")
+            try:
+                details = get_contact_and_location(lugar["place_id"])
+            except Exception as exc:
+                # Un fallo puntual o un límite temporal no debe perder todos
+                # los resultados de la búsqueda. Conservamos los datos básicos
+                # y las coordenadas que ya devuelve Text Search.
+                location = lugar.get("geometry", {}).get("location", {})
+                details = {
+                    "latitude": location.get("lat"),
+                    "longitude": location.get("lng"),
+                }
+                print(f"[WARN] Sin detalles para {lugar['place_id']}: {exc}")
 
             c.execute("""
                 INSERT OR IGNORE INTO search_result (
                     search_id, name, address, place_id, rating,
-                    postal_code, phone, website
+                    postal_code, phone, website, country, country_code,
+                    region, province, municipality, city, district,
+                    latitude, longitude, email, email_source, business_status
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 search_id,
                 lugar["name"],
                 lugar.get("formatted_address", ""),
                 lugar["place_id"],
                 lugar.get("rating", 0),
-                postal,
-                phone,
-                website
+                details.get("postal_code", ""),
+                details.get("phone", ""),
+                details.get("website", ""),
+                details.get("country", ""),
+                details.get("country_code", ""),
+                details.get("region", ""),
+                details.get("province", ""),
+                details.get("municipality", ""),
+                details.get("city", ""),
+                details.get("district", ""),
+                details.get("latitude"),
+                details.get("longitude"),
+                details.get("email", ""),
+                details.get("email_source", ""),
+                details.get("business_status", ""),
             ))
+            if details_delay > 0:
+                time.sleep(details_delay)
 
         conn.commit()
         conn.close()
@@ -223,7 +301,9 @@ def save_search_result(place_id: str):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     row = conn.execute("""
-        SELECT search_id, name, address, place_id, rating, postal_code, phone, website
+        SELECT search_id, name, address, place_id, rating, postal_code, phone, website,
+               country, country_code, region, province, municipality, city,
+               district, latitude, longitude, email, email_source, business_status
         FROM search_result
         WHERE place_id = ?
         ORDER BY id DESC
@@ -240,8 +320,10 @@ def save_search_result(place_id: str):
         conn.execute("""
             INSERT INTO place (
                 search_id, name, address, place_id, rating,
-                postal_code, phone, website
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                postal_code, phone, website, country, country_code,
+                region, province, municipality, city, district,
+                latitude, longitude, email, email_source, business_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, tuple(row))
         conn.commit()
     conn.close()
@@ -250,8 +332,21 @@ def save_search_result(place_id: str):
 def list_all_places():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT name, address, place_id, rating, publicado_en_wp, phone, website, wp_post_id, article_path FROM place")
-    places = [dict(zip(["name", "address", "place_id", "rating", "publicado_en_wp", "phone", "website", "wp_post_id", "article_path"], row)) for row in c.fetchall()]
+    c.execute("""
+        SELECT name, address, place_id, rating, publicado_en_wp, phone, website,
+               wp_post_id, article_path, postal_code, country, country_code,
+               region, province, municipality, city, district, latitude,
+               longitude, email, email_source, business_status
+        FROM place
+    """)
+    keys = [
+        "name", "address", "place_id", "rating", "publicado_en_wp", "phone",
+        "website", "wp_post_id", "article_path", "postal_code", "country",
+        "country_code", "region", "province", "municipality", "city",
+        "district", "latitude", "longitude", "email", "email_source",
+        "business_status",
+    ]
+    places = [dict(zip(keys, row)) for row in c.fetchall()]
     conn.close()
     return places
 
@@ -333,18 +428,27 @@ def get_or_create_review_info(place_id):
     """, (place_id,))
     row = c.fetchone()
     if row:
-        c.execute("SELECT website FROM place WHERE place_id = ?", (place_id,))
+        c.execute("""
+            SELECT website, city, municipality, email
+            FROM place WHERE place_id = ?
+        """, (place_id,))
         place_row = c.fetchone()
         website = place_row[0] if place_row and place_row[0] else ""
+        locality = (
+            (place_row[1] or place_row[2])
+            if place_row and (place_row[1] or place_row[2])
+            else row[2]
+        )
         conn.close()
         return {
             "place_id": place_id,
             "name": row[0],
             "address": row[1],
-            "locality": row[2],
+            "locality": locality,
             "phone": row[3],
             "text": row[4],
             "website": website,
+            "email": place_row[3] if place_row and place_row[3] else "",
         }
 
     # Si no la tenim, la generam (es crida la mateixa funció que abans)
@@ -512,6 +616,8 @@ def get_article_data(place_id):
             p.name, p.address, p.place_id, p.rating, p.postal_code,
             p.phone, p.website, p.tipo_de_comida,
             p.publicado_en_wp, p.wp_post_id, p.article_path,
+            p.email, p.country, p.country_code, p.region, p.province,
+            p.municipality, p.city, p.district, p.latitude, p.longitude,
             b.path
         FROM place p
         LEFT JOIN blog_article b ON p.place_id = b.place_id
@@ -526,7 +632,9 @@ def get_article_data(place_id):
     keys = [
         "name", "address", "place_id", "rating", "postal_code",
         "phone", "website", "tipo_de_comida", "publicado_en_wp",
-        "wp_post_id", "wp_url", "article_path"
+        "wp_post_id", "wp_url", "email", "country", "country_code",
+        "region", "province", "municipality", "city", "district",
+        "latitude", "longitude", "article_path"
     ]
     data = dict(zip(keys, row))
 
@@ -559,7 +667,3 @@ def get_all_images_for_place(place_id: str) -> list[str]:
     rows = c.fetchall()
     conn.close()
     return [r[0] for r in rows]
-
-
-
-

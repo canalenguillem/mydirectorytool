@@ -216,6 +216,11 @@ function PlaceCard({ place, onRefresh }: { place: Place; onRefresh: () => void }
             <StatusBadge published={!!place.publicado_en_wp} />
           </div>
           <p className="text-xs text-gray-500 mt-0.5 truncate">{place.address}</p>
+          {(place.city || place.postal_code) && (
+            <p className="text-[11px] text-gray-500 mt-0.5">
+              {[place.city, place.postal_code].filter(Boolean).join(' · ')}
+            </p>
+          )}
           <div className="flex items-center gap-2 mt-1">
             <StarRating rating={place.rating} />
             {place.tipo_de_comida && (
@@ -253,6 +258,11 @@ function SearchResultCard({ result, saved, onSaved }: { result: SearchResult; sa
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-gray-900 text-sm">{result.name}</h3>
         <p className="text-xs text-gray-500 mt-0.5 truncate">{result.address}</p>
+        {(result.city || result.postal_code) && (
+          <p className="text-[11px] text-blue-700 mt-0.5">
+            {[result.city, result.district, result.postal_code].filter(Boolean).join(' · ')}
+          </p>
+        )}
         <StarRating rating={result.rating} />
       </div>
       <div className="shrink-0 text-right">
