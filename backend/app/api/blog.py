@@ -1,5 +1,10 @@
 from fastapi import APIRouter
-from app.models.database import enrich_place_details, get_article_data, marcar_publicado
+from app.models.database import (
+    enrich_place_details,
+    get_article_data,
+    marcar_publicado,
+    set_place_food_type,
+)
 from app.services.wordpress import publicar_article_restaurante, guardar_campos_acf, get_or_create_category
 from app.services.comida_classifier import detectar_tipo_comida
 from app.services.openai_writer import generar_excerpt
@@ -52,6 +57,7 @@ def publicar_article(place_id: str):
     categoria_id = get_or_create_category(data.get("postal_code"))
     data["categoria_id"] = categoria_id
     data["tipo_de_comida"] = detectar_tipo_comida(data["content"])
+    set_place_food_type(place_id, data["tipo_de_comida"])
     print(f'tipo de comida {data["tipo_de_comida"]} ')
     data["excerpt"] = generar_excerpt(data["content"])
 
@@ -240,6 +246,7 @@ def full_publish(place_id: str):
     # imagen destacada y la galería.
     data["categoria_id"] = get_or_create_category(data.get("postal_code"))
     data["tipo_de_comida"] = detectar_tipo_comida(data["content"])
+    set_place_food_type(place_id, data["tipo_de_comida"])
     data["excerpt"] = generar_excerpt(data["content"])
 
     post_id = publicar_article_restaurante(data)

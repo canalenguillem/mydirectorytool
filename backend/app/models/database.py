@@ -641,6 +641,20 @@ def marcar_publicado(place_id, wp_post_id, wp_url=None):
     c.execute("UPDATE place SET publicado_en_wp = 1, wp_post_id = ?, article_path = ? WHERE place_id = ?", (wp_post_id, wp_url, place_id))
     conn.commit()
     conn.close()
+
+
+def set_place_food_type(place_id: str, food_type: str) -> None:
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.execute(
+            "UPDATE place SET tipo_de_comida = ? WHERE place_id = ?",
+            (food_type, place_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def get_article_data(place_id):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
