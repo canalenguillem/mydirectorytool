@@ -1,4 +1,6 @@
 import os
+import mimetypes
+from PIL import Image
 import markdown2
 import requests
 import sqlite3
@@ -9,6 +11,91 @@ from app.models.database import DB_PATH
 # Configuració
 WP_URL = config("WP_URL")
 AUTH = (config("WP_USER"), config("WP_APP_PASS"))
+REQUEST_TIMEOUT = 60
+MAX_UPLOAD_BYTES = 900_000
+
+
+def _prepare_media_path(image_path: str) -> str:
+    if os.path.getsize(image_path) <= MAX_UPLOAD_BYTES:
+        return image_path
+
+    output_dir = os.path.join(os.path.dirname(image_path), ".wordpress")
+    os.makedirs(output_dir, exist_ok=True)
+    stem = os.path.splitext(os.path.basename(image_path))[0]
+    output_path = os.path.join(output_dir, f"{stem}.jpg")
+
+    with Image.open(image_path) as source:
+        image = source.convert("RGB")
+        image.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
+        quality = 85
+        while True:
+            image.save(output_path, "JPEG", quality=quality, optimize=True)
+            if os.path.getsize(output_path) <= MAX_UPLOAD_BYTES or quality <= 55:
+                break
+            quality -= 10
+
+    print(
+        f"[OK] Imatge optimitzada per WordPress: "
+        f"{os.path.getsize(image_path)} -> {os.path.getsize(output_path)} bytes"
+    )
+    return output_path
+
+
+def _upload_media(image_path: str) -> int | None:
+    image_path = _prepare_media_path(image_path)
+    filename = os.path.basename(image_path)
+    mime_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    with open(image_path, "rb") as image:
+        response = requests.post(
+            f"{WP_URL}/wp-json/wp/v2/media",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+            auth=AUTH,
+            files={"file": (filename, image, mime_type)},
+            timeout=REQUEST_TIMEOUT,
+        )
+    if response.status_code != 201:
+        print(f"[ERROR] Error pujant {filename}: {response.status_code} -> {response.text}")
+        return None
+    return response.json().get("id")
+
+
+def ensure_featured_image(post_id: int, image_path: str) -> bool:
+    if not image_path or not os.path.exists(image_path):
+        print(f"[ERROR] Imatge destacada local no trobada: {image_path}")
+        return False
+
+    image_path = _prepare_media_path(image_path)
+    filename = os.path.basename(image_path)
+    stem = os.path.splitext(filename)[0]
+    media_id = None
+    lookup = requests.get(
+        f"{WP_URL}/wp-json/wp/v2/media",
+        auth=AUTH,
+        params={"search": stem, "per_page": 100, "_fields": "id,source_url"},
+        timeout=REQUEST_TIMEOUT,
+    )
+    if lookup.status_code == 200:
+        for media in lookup.json():
+            if os.path.basename(media.get("source_url", "")) == filename:
+                media_id = media.get("id")
+                break
+
+    if not media_id:
+        media_id = _upload_media(image_path)
+    if not media_id:
+        return False
+
+    assigned = requests.post(
+        f"{WP_URL}/wp-json/wp/v2/restaurante/{post_id}",
+        auth=AUTH,
+        json={"featured_media": media_id},
+        timeout=REQUEST_TIMEOUT,
+    )
+    if assigned.status_code != 200 or assigned.json().get("featured_media") != media_id:
+        print(f"[ERROR] WordPress no ha assignat la destacada al post {post_id}: {assigned.text}")
+        return False
+    print(f"[OK] Imatge destacada {media_id} assignada al post {post_id}")
+    return True
 
 def get_or_create_category(cpostal: str) -> int | None:
     r = requests.get(f"{WP_URL}/wp-json/wp/v2/categories?search={cpostal}", auth=AUTH)
@@ -103,12 +190,22 @@ def publicar_article_restaurante(data: dict) -> int | None:
         if row:
             featured_image_path = row[0]
 
+    # La destacada se sube antes de crear el post y se incluye en la misma
+    # petición. Si falla, no se crea una ficha incompleta.
+    if not featured_image_path or not os.path.exists(featured_image_path):
+        print(f"[ERROR] No hi ha imatge destacada local per {place_id}")
+        return None
+    featured_media_id = _upload_media(featured_image_path)
+    if not featured_media_id:
+        return None
+
     post_data = {
         "title": data["title"],
         "content": html_content,
         "excerpt": data.get("excerpt", ""),
         "status": "publish",
-        "categories": [data["categoria_id"]] if data.get("categoria_id") else []
+        "categories": [data["categoria_id"]] if data.get("categoria_id") else [],
+        "featured_media": featured_media_id,
     }
 
     r = requests.post(f"{WP_URL}/wp-json/wp/v2/restaurante", auth=AUTH, json=post_data)
@@ -122,26 +219,11 @@ def publicar_article_restaurante(data: dict) -> int | None:
     data["wp_url"] = post_link
     print(f"[OK] Publicat: {post_link}")
 
-    # 🖼️ Pujar imatge destacada
-    if featured_image_path and os.path.exists(featured_image_path):
-        with open(featured_image_path, "rb") as img:
-            filename = os.path.basename(featured_image_path)
-            media_res = requests.post(
-                f"{WP_URL}/wp-json/wp/v2/media",
-                headers={"Content-Disposition": f"attachment; filename={filename}"},
-                auth=AUTH,
-                files={"file": img}
-            )
-            if media_res.status_code == 201:
-                media_id = media_res.json().get("id")
-                requests.post(
-                    f"{WP_URL}/wp-json/wp/v2/restaurante/{post_id}",
-                    auth=AUTH,
-                    json={"featured_media": media_id}
-                )
-                print(f"[OK] Imatge destacada assignada")
-            else:
-                print(f"[ERROR] Error pujant imatge destacada: {media_res.status_code} -> {media_res.text}")
+    # Verificación explícita: publicar no se considera correcto si WordPress
+    # ignora la imagen indicada al crear el post.
+    if response.get("featured_media") != featured_media_id:
+        if not ensure_featured_image(post_id, featured_image_path):
+            print(f"[ERROR] El post {post_id} ha quedat sense destacada")
 
     # 🖼️ Pujar imatges addicionals i recollir URLs
     image_paths = get_all_images_for_place(place_id)
