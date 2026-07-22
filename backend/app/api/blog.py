@@ -15,6 +15,26 @@ router = APIRouter()
 WP_URL = config("WP_URL")
 AUTH = (config("WP_USER"), config("WP_APP_PASS"))
 
+
+def acf_fields_from_data(data: dict) -> dict:
+    return {
+        "telefono": data.get("phone", ""),
+        "web": data.get("website", ""),
+        "codigo_postal": data.get("postal_code", ""),
+        "email": data.get("email", ""),
+        "ciudad": data.get("city", ""),
+        "municipio": data.get("municipality", ""),
+        "provincia": data.get("province", ""),
+        "region": data.get("region", ""),
+        "pais": data.get("country", ""),
+        "codigo_pais": data.get("country_code", ""),
+        "distrito": data.get("district", ""),
+        "latitud": data.get("latitude"),
+        "longitud": data.get("longitude"),
+        "tipo_de_comida": data.get("tipo_de_comida", ""),
+        "place_id": data.get("place_id", ""),
+    }
+
 @router.post("/blog/publish")
 def publicar_article(place_id: str):
     data = get_article_data(place_id)
@@ -36,24 +56,7 @@ def publicar_article(place_id: str):
     if not post_id:
         return {"error": "Error al crear el post"}
 
-    guardar_campos_acf(post_id, {
-        "telefono": data.get("phone", ""),
-        "web": data.get("website", ""),
-        "codigo_postal": data.get("postal_code", ""),
-        "email": data.get("email", ""),
-        "ciudad": data.get("city", ""),
-        "municipio": data.get("municipality", ""),
-        "provincia": data.get("province", ""),
-        "region": data.get("region", ""),
-        "pais": data.get("country", ""),
-        "codigo_pais": data.get("country_code", ""),
-        "distrito": data.get("district", ""),
-        "latitud": data.get("latitude"),
-        "longitud": data.get("longitude"),
-        "tipo_de_comida": data.get("tipo_de_comida", ""),
-        "place_id": data.get("place_id", "")
-
-    })
+    guardar_campos_acf(post_id, acf_fields_from_data(data))
 
     marcar_publicado(place_id, post_id)
     return {"message": "Artículo publicado", "post_id": post_id}
@@ -234,23 +237,7 @@ def full_publish(place_id: str):
     if not post_id:
         return {"error": "Error al publicar article"}
 
-    guardar_campos_acf(post_id, {
-        "telefono": data.get("phone", ""),
-        "web": data.get("website", ""),
-        "codigo_postal": data.get("postal_code", ""),
-        "email": data.get("email", ""),
-        "ciudad": data.get("city", ""),
-        "municipio": data.get("municipality", ""),
-        "provincia": data.get("province", ""),
-        "region": data.get("region", ""),
-        "pais": data.get("country", ""),
-        "codigo_pais": data.get("country_code", ""),
-        "distrito": data.get("district", ""),
-        "latitud": data.get("latitude"),
-        "longitud": data.get("longitude"),
-        "tipo_de_comida": data.get("tipo_de_comida", ""),
-        "place_id": data.get("place_id", "")
-    })
+    guardar_campos_acf(post_id, acf_fields_from_data(data))
 
     marcar_publicado(place_id, post_id, data.get("wp_url"))
     return {"message": "Artículo publicado correctamente", "post_id": post_id}

@@ -329,6 +329,40 @@ def save_search_result(place_id: str):
     conn.close()
     return dict(row)
 
+
+def enrich_place_details(place_id: str) -> dict:
+    """Fill missing contact and location fields for an already saved place."""
+    from app.services.google_places import get_contact_and_location
+
+    details = get_contact_and_location(place_id)
+    text_fields = (
+        "postal_code", "phone", "website", "country", "country_code",
+        "region", "province", "municipality", "city", "district",
+        "email", "email_source", "business_status",
+    )
+    numeric_fields = ("latitude", "longitude")
+
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        assignments = [
+            f"{field} = CASE WHEN COALESCE({field}, '') = '' THEN ? ELSE {field} END"
+            for field in text_fields
+        ]
+        assignments.extend(
+            f"{field} = COALESCE({field}, ?)" for field in numeric_fields
+        )
+        values = [details.get(field, "") for field in text_fields]
+        values.extend(details.get(field) for field in numeric_fields)
+        conn.execute(
+            f"UPDATE place SET {', '.join(assignments)} WHERE place_id = ?",
+            (*values, place_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    return details
+
 def list_all_places():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
