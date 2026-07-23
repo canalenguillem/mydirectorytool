@@ -722,3 +722,21 @@ CPT al fallback del tema.
 - `robots.txt` anuncia correctamente `/wp-sitemap.xml`.
 - Inventario en
   `docs/inventories/2026-07-23-priority-taxonomy-content.md`.
+
+### Auditoría de calidad e indexación del 23 de julio de 2026
+
+- Auditor reutilizable añadido en `scripts/audit-wordpress-content.php`.
+- Acepta el `post_type` como argumento y no modifica WordPress.
+- Snapshot auditado: 249 restaurantes publicados.
+- No se encontraron títulos ni extractos exactamente duplicados.
+- Se detectaron 75 títulos de más de 70 caracteres.
+- Se detectaron 23 fichas sin galería, 10 sin contacto y 51 sin ubicación
+  completa.
+- 94 términos tenían una o dos fichas.
+- Plugin actualizado a 0.5.1, commit `1b1fc03`.
+- Taxonomías con menos de tres fichas y sin descripción: `noindex, follow`.
+- Esas páginas permanecen navegables, pero se omiten del sitemap.
+- Sitemaps resultantes: 13 municipios, 8 provincias y 9 tipos de comida.
+- No se generan nodos vacíos en los XML.
+- Inventario en
+  `docs/inventories/2026-07-23-content-quality-audit.md`.

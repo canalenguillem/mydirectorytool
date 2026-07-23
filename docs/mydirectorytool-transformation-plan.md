@@ -835,3 +835,65 @@ Solo después se añadirá el selector de directorio.
 La migración de motor está detallada en
 [Migración a PostgreSQL](postgresql-migration-plan.md) y no debe ejecutarse
 mientras la publicación masiva actual siga en curso.
+
+## 25. Dónde comer bien como implementación de referencia
+
+El directorio de restaurantes es el piloto funcional, no una plantilla que deba
+copiarse y editarse a mano para cada sector.
+
+### Capacidades ya demostradas
+
+- CPT estable en plugin.
+- Taxonomías, backfill y REST.
+- Tema con archivos, tarjetas, galerías y navegación.
+- Canonical, Open Graph, Schema, sitemaps y política `noindex`.
+- Imágenes, contacto, mapa y datos territoriales.
+- Auditoría de calidad reproducible.
+- Backups y rollback documentados.
+
+### Elementos que siguen acoplados a restaurantes
+
+| Implementación actual | Configuración futura |
+|---|---|
+| CPT `restaurante` | `directory.content_type` |
+| Slug `restaurantes` | `directory.public_slug` |
+| Schema `Restaurant` | `sector.schema_type` |
+| `tipo_comida_restaurante` | `sector.primary_taxonomy` |
+| Textos “restaurante” y “dónde comer” | etiquetas del perfil sectorial |
+| Hero gastronómico | identidad y recursos del directorio |
+| Prompts de comida | plantillas de contenido versionadas |
+| ACF de restaurante | esquema de campos del sector |
+| Intervalo de dos párrafos | configuración de presentación |
+| Umbral SEO de tres fichas | política SEO del directorio |
+
+### Regla para el segundo directorio
+
+No se duplicarán tema y plugin cambiando palabras. Antes de peluquerías deberán:
+
+1. Leer etiquetas, slugs, taxonomías y Schema desde un perfil.
+2. Exponer capacidades y configuración desde el plugin.
+3. Permitir que el tema consulte esas capacidades.
+4. Mover textos y recursos visuales a configuración del directorio.
+5. Hacer que MyDirectoryTool cree y valide el perfil.
+6. Ejecutar el mismo auditor con el nuevo `post_type`.
+
+El script `scripts/audit-wordpress-content.php` ya acepta el tipo de contenido
+como argumento y constituye la primera herramienta operativa reutilizable entre
+sectores.
+
+## 26. Política de contenido e indexación reutilizable
+
+Para cualquier sector:
+
+- Las páginas de taxonomía son navegables desde el primer negocio.
+- Una página con menos de tres fichas y sin descripción editorial usa `noindex`.
+- Esas páginas se omiten del sitemap.
+- Al alcanzar tres fichas o recibir una descripción útil, vuelven a ser
+  indexables automáticamente.
+- Las categorías prioritarias se eligen por inventario real.
+- Los textos editoriales no deben inventar experiencia ni generar cientos de
+  variaciones para buscadores.
+- La portada enlaza las categorías con mayor utilidad.
+
+El umbral debe convertirse en configuración antes del segundo directorio; el
+valor inicial validado en restaurantes es `3`.
