@@ -552,7 +552,7 @@ Actualizar esta tabla después de cada sesión:
 | 0. Backup e inventario | Completado | 2026-07-23 | Backup `2026-07-23_phase0` | Ver inventario versionado |
 | 1. Código WordPress en Git | Completado | 2026-07-23 | Tema `e12c0ce`; plugin `6a087af` | Ambos repositorios publicados |
 | 2. Plugin y migración CPT | Completado | 2026-07-23 | Backup `2026-07-23_pre_plugin_activation`; tema `e12c0ce`; plugin `6a087af` | Plugin activo y migración verificada |
-| 3. Taxonomías | Pendiente | | | |
+| 3. Taxonomías | En curso | 2026-07-23 | Plugin `15fd83c` | Registradas en administración y REST; URLs y backfill pendientes |
 | 4. Backfill histórico | Pendiente | | | |
 | 5. Tema propio | Pendiente | | | |
 | 6. SEO y Schema | Pendiente | | | |
@@ -560,15 +560,15 @@ Actualizar esta tabla después de cada sesión:
 
 ## 17. Próxima acción exacta
 
-La migración del CPT ya está activa y verificada. El siguiente bloque será la
-fase 3, taxonomías, pero debe empezar sin modificar todavía los 248 contenidos:
+Las taxonomías ya están registradas y el primer inventario `dry-run` está
+documentado. El siguiente bloque debe completar únicamente:
 
-1. Definir nombres, slugs y jerarquía de municipio, provincia y tipo de comida.
-2. Registrar las taxonomías en el plugin con exposición REST.
-3. Preparar un informe `dry-run` que traduzca los campos ACF actuales a términos.
-4. Revisar valores vacíos, variantes y ambigüedades antes del backfill.
-5. Activar los archivos públicos de taxonomía solo cuando sus slugs y plantillas
-   estén aprobados.
+1. Incorporar al plugin un backfill reutilizable con modo `dry-run`.
+2. Aplicar solo las equivalencias aprobadas de provincia y tipo de comida.
+3. Mantener sin término las fichas con ACF territorial vacío.
+4. Ejecutar una muestra inicial de 10 fichas y comprobar REST y administración.
+5. Repetir de forma idempotente y por lotes únicamente después de revisar la
+   muestra.
 
 El fallback del tema se conservará durante la siguiente fase y se retirará en
 una versión posterior, una vez comprobada la estabilidad del plugin.
@@ -618,3 +618,16 @@ una versión posterior, una vez comprobada la estabilidad del plugin.
 La fase 2 se considera completada. El rollback sigue disponible mediante el
 backup anterior y la desactivación del plugin, que devolvería el registro del
 CPT al fallback del tema.
+
+### Taxonomías estructurales del 23 de julio de 2026
+
+- Plugin actualizado a la versión 0.2.0, commit `15fd83c`.
+- Registradas `municipio_restaurante`, `provincia_restaurante` y
+  `tipo_comida_restaurante`.
+- Asociadas únicamente al CPT `restaurante`.
+- Visibles en administración y expuestas mediante REST.
+- Sus consultas y rewrites públicos están desactivados temporalmente.
+- No se crearon términos ni se modificó ninguna ficha.
+- Se conservaron los 248 restaurantes y las páginas públicas verificadas.
+- El inventario de los campos ACF está en
+  `docs/inventories/2026-07-23-taxonomy-dry-run.md`.
