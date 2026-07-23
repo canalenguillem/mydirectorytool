@@ -759,3 +759,18 @@ CPT al fallback del tema.
 - No se modificaron títulos, contenidos, slugs ni URLs.
 - Inventario en
   `docs/inventories/2026-07-23-title-proposals.md`.
+
+### Muestra aplicada de títulos del 23 de julio de 2026
+
+- Backup verificado de `wp_posts` creado antes de escribir.
+- Se aplicaron diez títulos revisados a los posts 42, 53, 65, 111, 184, 244,
+  256, 268, 431 y 593.
+- Se modificó únicamente `post_title`; los diez `post_name`, permalinks y
+  canonicals permanecieron iguales.
+- Se validaron HTTP 200, H1, Open Graph y Schema en páginas públicas.
+- Ocho contenidos incluían además un H1 antiguo generado dentro del cuerpo.
+  Esos encabezados duplicados se eliminaron mediante coincidencia exacta.
+- La muestra queda cerrada; antes de ampliar el lote debe revisarse visualmente
+  y compararse su rendimiento en Search Console.
+- Inventario en
+  `docs/inventories/2026-07-23-title-sample.md`.
