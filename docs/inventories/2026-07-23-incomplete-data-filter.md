@@ -82,6 +82,15 @@ El frontend incorpora:
 - contador de resultados;
 - etiquetas rojas en cada ficha indicando exactamente qué falta.
 
+Las fichas con contacto o ubicación incompletos muestran
+`Actualizar datos desde Google`. La acción:
+
+1. realiza una sola petición de detalles para el Place ID;
+2. completa únicamente campos locales vacíos;
+3. conserva las correcciones manuales existentes;
+4. actualiza los campos ACF si el artículo sigue publicado;
+5. refresca las etiquetas de la ficha.
+
 ## Reparación de enlaces
 
 El post 42, `Reštaurácia Divný Janko`, existía en WordPress pero tenía

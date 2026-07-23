@@ -30,6 +30,54 @@ def list_saved_places():
     return {"guardats": list_all_places()}
 
 
+@router.post("/enrich")
+def enrich_saved_place(place_id: str):
+    from fastapi import HTTPException
+    from app.models.database import enrich_place_details, get_article_data, list_all_places
+    from app.api.blog import acf_fields_from_data
+    from app.services.wordpress import guardar_campos_acf
+
+    saved = next(
+        (place for place in list_all_places() if place["place_id"] == place_id),
+        None,
+    )
+    if not saved:
+        raise HTTPException(status_code=404, detail="El negocio no está guardado")
+
+    try:
+        details = enrich_place_details(place_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"No se pudieron obtener los datos de Google: {exc}",
+        ) from exc
+
+    updated = get_article_data(place_id)
+    wordpress_synced = False
+    if (
+        updated
+        and updated.get("publicado_en_wp")
+        and updated.get("wp_post_id")
+        and updated.get("wp_url")
+    ):
+        wordpress_synced = bool(
+            guardar_campos_acf(
+                int(updated["wp_post_id"]),
+                acf_fields_from_data(updated),
+            )
+        )
+
+    current = next(
+        place for place in list_all_places() if place["place_id"] == place_id
+    )
+    return {
+        "message": "Datos actualizados desde Google",
+        "details": details,
+        "wordpress_synced": wordpress_synced,
+        "place": current,
+    }
+
+
 @router.post("/save")
 def save_place(place_id: str):
     from fastapi import HTTPException
@@ -199,6 +247,4 @@ def delete_place_complet(place_id: str):
     from app.services.place_deletion import delete_place_completely
 
     return delete_place_completely(place_id)
-
-
 

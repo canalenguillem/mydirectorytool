@@ -73,6 +73,7 @@ function PlacePanel({ place, onRefresh }: { place: Place; onRefresh: () => void 
   const [imagesStatus, setImagesStatus] = useState<ActionStatus>({ type: 'idle' })
   const [publishStatus, setPublishStatus] = useState<ActionStatus>({ type: 'idle' })
   const [pipelineStatus, setPipelineStatus] = useState<ActionStatus>({ type: 'idle' })
+  const [enrichStatus, setEnrichStatus] = useState<ActionStatus>({ type: 'idle' })
   const [articleContent, setArticleContent] = useState<string | null>(null)
   const [showArticle, setShowArticle] = useState(false)
 
@@ -138,6 +139,25 @@ function PlacePanel({ place, onRefresh }: { place: Place; onRefresh: () => void 
     }
   }, [place.place_id, onRefresh])
 
+  const enrichPlace = useCallback(async () => {
+    setEnrichStatus({ type: 'loading' })
+    try {
+      const result = await api.enrichPlace(place.place_id)
+      setEnrichStatus({
+        type: 'success',
+        message: result.wordpress_synced
+          ? 'Datos y WordPress actualizados ✓'
+          : 'Datos locales actualizados ✓',
+      })
+      onRefresh()
+    } catch (e) {
+      setEnrichStatus({
+        type: 'error',
+        message: e instanceof Error ? e.message : String(e),
+      })
+    }
+  }, [place.place_id, onRefresh])
+
   return (
     <div className="bg-gray-50 border-t border-gray-200 p-4 space-y-3">
       {place.phone && <p className="text-sm text-gray-600">📞 {place.phone}</p>}
@@ -148,6 +168,13 @@ function PlacePanel({ place, onRefresh }: { place: Place; onRefresh: () => void 
       )}
 
       <div className="grid grid-cols-1 gap-2">
+        {(place.incomplete_fields?.includes('location') || place.incomplete_fields?.includes('contact')) && (
+          <ActionButton
+            label="Actualizar datos desde Google"
+            status={enrichStatus}
+            onClick={enrichPlace}
+          />
+        )}
         <ActionButton label="1. Obtener reseñas" status={reviewsStatus} onClick={getReviews} />
         <ActionButton label="2. Generar artículo" status={articleStatus} onClick={generateArticle} />
         {articleContent && (

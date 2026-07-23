@@ -43,6 +43,13 @@ export const api = {
   saved: () =>
     req<{ guardats: import('./types').Place[] }>('/places/saved'),
 
+  enrichPlace: (place_id: string) =>
+    req<{
+      message: string
+      wordpress_synced: boolean
+      place: import('./types').Place
+    }>(`/places/enrich?place_id=${encodeURIComponent(place_id)}`, { method: 'POST' }),
+
   savePlace: (place_id: string) =>
     req<{ message: string; place: import('./types').Place }>(`/places/save?place_id=${encodeURIComponent(place_id)}`, { method: 'POST' }),
 
