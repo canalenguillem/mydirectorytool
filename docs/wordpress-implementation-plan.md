@@ -560,15 +560,16 @@ Actualizar esta tabla después de cada sesión:
 
 ## 17. Próxima acción exacta
 
-La capa SEO y las pruebas de fichas incompletas están completadas. El siguiente
-bloque será editorial y de enlazado interno:
+Las primeras páginas prioritarias ya tienen contenido editorial y enlaces desde
+la portada. El siguiente bloque será de calidad e indexación:
 
-1. Seleccionar municipios y tipos de comida prioritarios según volumen.
-2. Añadir descripciones únicas a sus términos, empezando por páginas con varios
-   restaurantes.
-3. Enlazar localidades relacionadas sin crear texto automático repetitivo.
-4. Revisar títulos y extractos de las tarjetas con peor calidad.
-5. Solicitar indexación solo de páginas con contenido y utilidad suficientes.
+1. Revisar títulos y extractos de las tarjetas con peor calidad.
+2. Detectar páginas de taxonomía con una sola ficha y decidir si deben esperar
+   antes de promoverse.
+3. Añadir descripciones a la siguiente tanda únicamente cuando haya inventario
+   y utilidad suficiente.
+4. Enviar el sitemap actualizado a Search Console.
+5. Medir impresiones por municipio, tipo de comida y ficha antes de ampliar.
 
 El fallback del tema se conservará durante la siguiente fase y se retirará en
 una versión posterior, una vez comprobada la estabilidad del plugin.
@@ -702,3 +703,22 @@ CPT al fallback del tema.
 - Verificadas ficha, municipio, archivo general y página 2 con HTTP 200.
 - Ficha sin galería ni coordenadas verificada sin bloques vacíos.
 - Inventario en `docs/inventories/2026-07-23-seo-schema.md`.
+
+### Contenido territorial y enlaces prioritarios del 23 de julio de 2026
+
+- Backup previo de términos:
+  `/home/guillem/backups/dondecomerbien/2026-07-23_pre_term_descriptions/`.
+- Doce descripciones editoriales añadidas a páginas prioritarias.
+- Municipios: Cala Millor, Palma, Bergamo, Sineu, Alcúdia y Port d’Alcúdia.
+- Provincias: Illes Balears y Bergamo.
+- Tipos: Mediterránea, Mallorquina, Italiana y Española.
+- Los textos evitan cifras fijas y se basan en el inventario real.
+- Portada actualizada, tema commit `d8908a6`.
+- La portada enlaza automáticamente ocho municipios y seis tipos con mayor
+  inventario.
+- Los enlaces se actualizarán solos cuando cambien los conteos.
+- Sitemap de restaurantes y tres sitemaps de taxonomías verificados con HTTP
+  200.
+- `robots.txt` anuncia correctamente `/wp-sitemap.xml`.
+- Inventario en
+  `docs/inventories/2026-07-23-priority-taxonomy-content.md`.
