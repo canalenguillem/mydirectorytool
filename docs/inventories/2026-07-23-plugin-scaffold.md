@@ -55,11 +55,13 @@ origin: git@github.com:canalenguillem/mydirectorytool-wp-plugin.git
 commit: 3de04e8 Initial plugin scaffold
 ```
 
-El remoto no existía al finalizar esta sesión. Debe crearse vacío en GitHub con
-el nombre `canalenguillem/mydirectorytool-wp-plugin`; después se ejecutará:
+El repositorio fue creado y el commit inicial se publicó correctamente:
 
-```bash
-git push -u origin main
+```text
+repositorio: git@github.com:canalenguillem/mydirectorytool-wp-plugin.git
+rama: main
+upstream: origin/main
+estado: publicado
 ```
 
 No activar el plugin hasta completar el fallback temporal del CPT en el tema y

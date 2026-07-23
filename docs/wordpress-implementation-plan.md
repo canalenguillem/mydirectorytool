@@ -550,7 +550,7 @@ Actualizar esta tabla después de cada sesión:
 | Fase | Estado | Fecha | Commit / backup | Notas |
 |---|---|---|---|---|
 | 0. Backup e inventario | Completado | 2026-07-23 | Backup `2026-07-23_phase0` | Ver inventario versionado |
-| 1. Código WordPress en Git | En curso | 2026-07-23 | Plugin `3de04e8` | Tema publicado; plugin local pendiente de crear remoto y push |
+| 1. Código WordPress en Git | Completado | 2026-07-23 | Tema `159db1f`; plugin `3de04e8` | Ambos repositorios publicados |
 | 2. Plugin y migración CPT | Pendiente | | | |
 | 3. Taxonomías | Pendiente | | | |
 | 4. Backfill histórico | Pendiente | | | |
@@ -580,7 +580,8 @@ plugin en una sesión separada.
 - Commit inicial del plugin: `3de04e8`.
 - Remoto configurado:
   `git@github.com:canalenguillem/mydirectorytool-wp-plugin.git`.
-- Pendiente: crear el repositorio vacío en GitHub y ejecutar el primer push.
+- Plugin publicado en
+  `git@github.com:canalenguillem/mydirectorytool-wp-plugin.git`.
 
 No activar el plugin todavía. La versión 0.1.0 es un esqueleto sin hooks
 funcionales; la migración del CPT corresponde a una sesión posterior.
