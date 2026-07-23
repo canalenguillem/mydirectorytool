@@ -126,7 +126,7 @@ Cuando aumenten volumen y proyectos:
 ## Frontera con WordPress
 
 La herramienta gestiona datos, generación y publicación; un plugin propio
-mantiene el modelo público del directorio (CPT, taxonomías y Schema.org); y un
-tema hijo controla las plantillas y el diseño. La decisión completa y el orden
+mantiene el modelo público del directorio (CPT, taxonomías y Schema.org); y el
+tema propio controla las plantillas y el diseño. La decisión completa y el orden
 de implementación están documentados en
 [Arquitectura de WordPress](wordpress-integration.md).

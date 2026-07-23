@@ -11,7 +11,8 @@ MyDirectoryTool es una herramienta para crear y mantener directorios de negocios
 5. [Operación](operations.md): despliegue, cola, búsquedas, seguridad y copias de respaldo.
 6. [Contenido y SEO](content-and-seo.md): fichas, páginas geográficas y enlazado interno.
 7. [Hoja de ruta](roadmap.md): fases recomendadas para convertir el MVP en una plataforma.
-8. [Arquitectura de WordPress](wordpress-integration.md): reparto estable entre la herramienta, el plugin y el tema hijo.
+8. [Arquitectura de WordPress](wordpress-integration.md): reparto estable entre la herramienta, el plugin y el tema propio.
+9. [Plan de implementación de WordPress](wordpress-implementation-plan.md): runbook completo de backups, plugin, taxonomías, tema propio, SEO, pruebas y reversión.
 
 ## Objetivo resumido
 

@@ -29,7 +29,7 @@ Resultado: un pipeline fiable que puede operar durante días sin supervisión co
 
 - Crear un plugin propio para CPT, taxonomías y Schema.org.
 - Registrar municipio, provincia y tipo de comida como taxonomías.
-- Crear un tema hijo para las plantillas del directorio.
+- Refactorizar el tema propio para las plantillas del directorio.
 - Generar páginas de ciudad como borradores.
 - Listar restaurantes dinámicamente.
 - Crear enlazado bidireccional.

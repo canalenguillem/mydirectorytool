@@ -32,9 +32,9 @@ Un plugin pequeño y estable se encargará de:
 Las taxonomías no deben registrarse únicamente en el tema. Son parte del modelo
 del directorio y necesitan sobrevivir a cualquier rediseño.
 
-### Tema hijo
+### Tema propio
 
-El tema hijo controla únicamente la presentación:
+El tema propio controla únicamente la presentación:
 
 - Plantilla individual de restaurante.
 - Archivo general y páginas por taxonomía/localidad.
@@ -55,7 +55,7 @@ plugin del directorio
 ├── taxonomía tipo_de_comida
 └── Schema.org
 
-tema hijo
+tema propio
 ├── single-restaurante.php
 ├── archive-restaurante.php
 ├── taxonomy-municipio.php
@@ -87,7 +87,11 @@ Mallorca
 
 1. Crear el plugin y registrar taxonomías sin cambiar todavía el diseño.
 2. Sincronizar las fichas existentes y comprobar términos/URLs.
-3. Crear el tema hijo y la plantilla individual.
+3. Refactorizar el tema propio y su plantilla individual.
 4. Añadir archivos por localidad y tarjetas reutilizables.
 5. Incorporar Schema.org, enlaces internos, mapas y etiquetas Open Graph.
 6. Probar en un entorno de staging antes de activar los cambios en producción.
+
+La instalación actual usa `dondecomerbien-theme`, un tema propio independiente.
+GeneratePress queda fuera de la arquitectura prevista. El procedimiento completo
+está en [Plan de implementación de WordPress](wordpress-implementation-plan.md).
