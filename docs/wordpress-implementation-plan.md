@@ -550,8 +550,8 @@ Actualizar esta tabla después de cada sesión:
 | Fase | Estado | Fecha | Commit / backup | Notas |
 |---|---|---|---|---|
 | 0. Backup e inventario | Completado | 2026-07-23 | Backup `2026-07-23_phase0` | Ver inventario versionado |
-| 1. Código WordPress en Git | Completado | 2026-07-23 | Tema `159db1f`; plugin `3de04e8` | Ambos repositorios publicados |
-| 2. Plugin y migración CPT | Pendiente | | | |
+| 1. Código WordPress en Git | Completado | 2026-07-23 | Tema `e12c0ce`; plugin `6a087af` | Ambos repositorios publicados |
+| 2. Plugin y migración CPT | En curso | 2026-07-23 | Tema `e12c0ce`; plugin `6a087af` | Registro compatible preparado; plugin aún inactivo |
 | 3. Taxonomías | Pendiente | | | |
 | 4. Backfill histórico | Pendiente | | | |
 | 5. Tema propio | Pendiente | | | |
@@ -560,14 +560,18 @@ Actualizar esta tabla después de cada sesión:
 
 ## 17. Próxima acción exacta
 
-No empezar todavía por el diseño. La próxima sesión debe completar únicamente:
+No empezar todavía por el diseño ni por las taxonomías. El siguiente bloque debe
+completar únicamente:
 
-1. Fase 0: backups e inventario verificable.
-2. Fase 1: copiar el tema activo al repositorio.
-3. Crear el esqueleto inactivo de `mydirectorytool-core`.
+1. Crear un segundo backup, más pequeño, inmediatamente anterior a la activación.
+2. Activar `mydirectorytool-core` en una ventana controlada.
+3. Regenerar las reglas de enlaces permanentes mediante el hook de activación.
+4. Verificar conteos, administración, archivo, una ficha y la ruta REST.
+5. Confirmar que el tema aplica su fallback y ya no vuelve a registrar el CPT.
+6. Si alguna comprobación falla, desactivar el plugin y ejecutar el rollback.
 
-Al terminar esos tres puntos se revisará el diff y se decidirá la activación del
-plugin en una sesión separada.
+No se retirará el fallback del tema hasta que la activación haya quedado
+verificada y estable.
 
 ### Avance del 23 de julio de 2026
 
@@ -583,5 +587,18 @@ plugin en una sesión separada.
 - Plugin publicado en
   `git@github.com:canalenguillem/mydirectorytool-wp-plugin.git`.
 
-No activar el plugin todavía. La versión 0.1.0 es un esqueleto sin hooks
-funcionales; la migración del CPT corresponde a una sesión posterior.
+### Preparación del CPT del 23 de julio de 2026
+
+- El tema incorpora un fallback: solo registra `restaurante` si ningún plugin lo
+  ha registrado previamente.
+- El plugin incorpora el registro compatible del CPT en prioridad 5, con el
+  mismo slug `restaurantes`, soportes y exposición REST actuales.
+- Los hooks de activación y desactivación regeneran las reglas de enlaces
+  permanentes.
+- Se validó la sintaxis de los cuatro archivos PHP modificados.
+- Con el plugin todavía inactivo se verificaron 248 restaurantes publicados,
+  tema activo `dondecomerbien-theme`, archivo, ficha y REST con HTTP 200.
+- Commits publicados: tema `e12c0ce`; plugin `6a087af`.
+
+No activar el plugin todavía. El código está preparado, pero falta el backup
+inmediatamente anterior y la prueba de activación controlada descrita arriba.
