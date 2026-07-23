@@ -555,20 +555,20 @@ Actualizar esta tabla después de cada sesión:
 | 3. Taxonomías | Completado | 2026-07-23 | Plugin `cd43c57` | Administración, REST, términos y archivos públicos verificados |
 | 4. Backfill histórico | Completado | 2026-07-23 | Backup `2026-07-23_pre_taxonomy_sample`; plugin `649c177` | 248 fichas procesadas; verificación idempotente sin cambios |
 | 5. Tema propio | En curso | 2026-07-23 | Tema `7dc7b29` | Archivos, tarjeta y ficha individual reutilizables desplegados |
-| 6. SEO y Schema | Pendiente | | | |
-| 7. Pruebas | Pendiente | | | |
+| 6. SEO y Schema | Completado | 2026-07-23 | Plugin `8112706` | Canonical, Open Graph, Twitter y Restaurant JSON-LD verificados |
+| 7. Pruebas | En curso | 2026-07-23 | Tema `8dcca8a`; plugin `8112706` | Rutas, paginación, galerías y fichas incompletas verificadas |
 
 ## 17. Próxima acción exacta
 
-La ficha individual y las galerías intercaladas están desplegadas. El siguiente
-bloque continuará la fase del tema:
+La capa SEO y las pruebas de fichas incompletas están completadas. El siguiente
+bloque será editorial y de enlazado interno:
 
-1. Incorporar canonical y metadatos sociales sin duplicar los de otro plugin.
-2. Revisar en navegador el responsive de fichas, tarjetas y mapas.
-3. Probar una muestra de fichas sin imagen, sin contacto y sin coordenadas.
-4. Extraer contacto y migas a componentes independientes cuando se añada el
-   segundo tipo de directorio.
-5. Añadir descripciones editoriales a los términos territoriales prioritarios.
+1. Seleccionar municipios y tipos de comida prioritarios según volumen.
+2. Añadir descripciones únicas a sus términos, empezando por páginas con varios
+   restaurantes.
+3. Enlazar localidades relacionadas sin crear texto automático repetitivo.
+4. Revisar títulos y extractos de las tarjetas con peor calidad.
+5. Solicitar indexación solo de páginas con contenido y utilidad suficientes.
 
 El fallback del tema se conservará durante la siguiente fase y se retirará en
 una versión posterior, una vez comprobada la estabilidad del plugin.
@@ -688,3 +688,17 @@ CPT al fallback del tema.
 - Archivo y taxonomía de control continuaron con HTTP 200.
 - Inventario en
   `docs/inventories/2026-07-23-interleaved-gallery.md`.
+
+### SEO y datos estructurados del 23 de julio de 2026
+
+- Plugin actualizado a la versión 0.5.0, commit `8112706`.
+- Canonical añadido a archivo general, taxonomías y páginas paginadas.
+- Las fichas conservan el canonical nativo de WordPress, sin duplicarlo.
+- Open Graph y Twitter Cards añadidos a todas las vistas del directorio.
+- La imagen destacada se usa para compartir las fichas.
+- JSON-LD `Restaurant` incluye solo datos existentes: contacto, dirección,
+  coordenadas, imagen, web y tipos de comida.
+- La capa social se desactiva si se instala un proveedor SEO conocido.
+- Verificadas ficha, municipio, archivo general y página 2 con HTTP 200.
+- Ficha sin galería ni coordenadas verificada sin bloques vacíos.
+- Inventario en `docs/inventories/2026-07-23-seo-schema.md`.
