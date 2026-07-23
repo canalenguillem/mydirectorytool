@@ -2,7 +2,7 @@
 
 Fecha: 23 de julio de 2026.
 
-Tema `mydirectorytool-wp-theme`, versión 1.2, commit `7dc7b29`.
+Tema `mydirectorytool-wp-theme`, versión 1.2, commits `7dc7b29` y `ce64f3b`.
 
 ## Regla editorial reutilizable
 
@@ -15,6 +15,8 @@ La galería no se presenta como un bloque completo al final:
    conservan al final.
 5. En escritorio se muestran dos columnas.
 6. En móvil se muestran en una columna.
+7. La URL de `style.css` incluye automáticamente su fecha de modificación para
+   evitar que el navegador conserve una cuadrícula anterior en caché.
 
 Esta regla debe ser configurable por tipo de directorio en el futuro. Por
 ejemplo, un directorio de peluquerías podrá conservar parejas, usar imágenes
@@ -63,3 +65,4 @@ Resultado:
 - Archivo general: HTTP 200.
 - Taxonomía Cala Millor: HTTP 200.
 - Errores PHP: ninguno.
+- Comprobación visual en Chrome a 1440 píxeles: dos imágenes en la misma fila.
