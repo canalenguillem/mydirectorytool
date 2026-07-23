@@ -451,6 +451,7 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
   const [places, setPlaces] = useState<Place[]>([])
   const [loadingPlaces, setLoadingPlaces] = useState(true)
   const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'published'>('all')
+  const [maximumRating, setMaximumRating] = useState<string>('')
   const [savedPlaceIds, setSavedPlaceIds] = useState<Set<string>>(new Set())
   const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null)
   const [queueBusy, setQueueBusy] = useState(false)
@@ -520,7 +521,8 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
       activeFilter === 'pending' ? !p.publicado_en_wp :
       !!p.publicado_en_wp
     const matchesQuery = !query.trim() || p.name.toLowerCase().includes(query.toLowerCase())
-    return matchesFilter && matchesQuery
+    const matchesRating = !maximumRating || p.rating < Number(maximumRating)
+    return matchesFilter && matchesQuery && matchesRating
   })
 
   const publishedCount = places.filter(p => p.publicado_en_wp).length
@@ -602,6 +604,29 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
               <div className="text-xs text-gray-500">{label}</div>
             </button>
           ))}
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 flex items-center gap-3">
+          <label htmlFor="rating-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+            Puntuación
+          </label>
+          <select
+            id="rating-filter"
+            value={maximumRating}
+            onChange={event => setMaximumRating(event.target.value)}
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-700"
+          >
+            <option value="">Cualquier puntuación</option>
+            <option value="4.5">Menos de 4,5</option>
+            <option value="4">Menos de 4</option>
+            <option value="3.5">Menos de 3,5</option>
+            <option value="3">Menos de 3</option>
+          </select>
+          {maximumRating && (
+            <span className="text-xs text-gray-500 whitespace-nowrap">
+              {filteredPlaces.length} resultados
+            </span>
+          )}
         </div>
 
         <QueuePanel status={queueStatus} busy={queueBusy} error={queueError} onAction={queueAction} />
