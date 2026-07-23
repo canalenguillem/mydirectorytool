@@ -4,7 +4,7 @@ Fecha: 23 de julio de 2026.
 
 ## Versiones
 
-- Tema `mydirectorytool-wp-theme`: commit `136d1ff`.
+- Tema `mydirectorytool-wp-theme`: commits `136d1ff` y `981ce54`.
 - Plugin `mydirectorytool-core`: versión 0.4.1, commit `cd43c57`.
 
 ## URLs definitivas
@@ -64,6 +64,19 @@ alta para la primera página y la paginación.
 - Ficha existente: HTTP 200.
 - REST de restaurantes: HTTP 200.
 - Logs PHP durante el despliegue: sin errores.
+
+## Navegación
+
+Las páginas dejaron de estar huérfanas:
+
+- El menú principal incorpora automáticamente el acceso `Explorar`.
+- Es compatible tanto con un menú asignado como con el menú de páginas de
+  respaldo que utiliza actualmente WordPress.
+- El enlace conduce a `/restaurantes/#explorar-directorio`.
+- El archivo de restaurantes enumera, en grupos plegables, todos los municipios,
+  provincias y tipos de comida que tienen fichas.
+- La navegación se genera desde las taxonomías, por lo que los términos futuros
+  aparecerán automáticamente sin editar el tema.
 
 ## Pendiente
 
