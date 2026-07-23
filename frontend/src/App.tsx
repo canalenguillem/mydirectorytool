@@ -164,12 +164,19 @@ function PlacePanel({ place, onRefresh }: { place: Place; onRefresh: () => void 
           </div>
         )}
         <ActionButton label="3. Descargar imágenes" status={imagesStatus} onClick={downloadImages} />
-        {!place.publicado_en_wp && (
+        {(!place.publicado_en_wp || !place.article_path) && (
           <>
-            <ActionButton label="4. Publicar en WordPress" status={publishStatus} onClick={publish} variant="primary" />
-            <div className="border-t border-gray-200 pt-2">
-              <ActionButton label="🚀 Pipeline completo (1→2→3→4)" status={pipelineStatus} onClick={runPipeline} variant="pipeline" />
-            </div>
+            <ActionButton
+              label={place.publicado_en_wp ? '4. Volver a publicar en WordPress' : '4. Publicar en WordPress'}
+              status={publishStatus}
+              onClick={publish}
+              variant="primary"
+            />
+            {!place.publicado_en_wp && (
+              <div className="border-t border-gray-200 pt-2">
+                <ActionButton label="🚀 Pipeline completo (1→2→3→4)" status={pipelineStatus} onClick={runPipeline} variant="pipeline" />
+              </div>
+            )}
           </>
         )}
         {place.publicado_en_wp && place.article_path && (

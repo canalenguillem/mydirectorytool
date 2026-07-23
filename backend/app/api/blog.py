@@ -235,7 +235,7 @@ def full_publish(place_id: str):
 
     # Evita crear un segon post y volver a subir sus imágenes si se repite
     # accidentalmente la petición.
-    if data.get("publicado_en_wp"):
+    if data.get("publicado_en_wp") and data.get("wp_url"):
         return {
             "message": "El artículo ya estaba publicado",
             "post_id": data.get("wp_post_id"),

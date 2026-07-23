@@ -93,6 +93,12 @@ Los otros ocho registros sin URL son las referencias a posts eliminados ya
 inventariadas. Se muestran con la etiqueta `Sin artículo en WordPress` y no se
 les fabrica un enlace que conduciría a un 404.
 
+Para estas referencias desincronizadas, el panel muestra
+`Volver a publicar en WordPress`. La acción reutiliza el artículo y las imágenes
+locales, crea un post nuevo y sustituye el ID y la URL históricos. El pipeline
+completo no se ofrece en este caso para no repetir innecesariamente reseñas,
+generación e imágenes.
+
 ## Validación y despliegue
 
 - Backend compilado con Python sin errores.
