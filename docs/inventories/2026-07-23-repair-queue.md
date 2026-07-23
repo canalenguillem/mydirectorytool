@@ -62,3 +62,19 @@ Resultado del reintento:
 - página pública verificada con HTTP 200;
 - 91 trabajos permanecieron pendientes y la cola continuó activa.
 
+## Población y taxonomías tras enriquecer
+
+La ficha de Cafeteria PICNIC demostró que ACF ya contenía `Sa Coma`, aunque la
+plantilla solo mostraba el código postal y la taxonomía municipal seguía vacía.
+
+Correcciones:
+
+- tema 1.5 muestra `población · código postal` en los datos de la ficha;
+- plugin 0.5.2 sincroniza municipio, provincia y tipo después de guardar ACF;
+- PICNIC quedó asignado a `Sa Coma` e `Illes Balears`;
+- página pública validada con HTTP 200 y `Sa Coma · 07560`.
+
+Repositorios:
+
+- tema, commit `2dd9d91`;
+- plugin, commit `3ee1cf7`.
