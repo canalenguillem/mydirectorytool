@@ -370,7 +370,12 @@ def list_all_places():
         SELECT name, address, place_id, rating, publicado_en_wp, phone, website,
                wp_post_id, article_path, postal_code, country, country_code,
                region, province, municipality, city, district, latitude,
-               longitude, email, email_source, business_status
+               longitude, email, email_source, business_status, tipo_de_comida,
+               (
+                   SELECT COUNT(*)
+                   FROM place_image
+                   WHERE place_image.place_id = place.place_id
+               ) AS image_count
         FROM place
     """)
     keys = [
@@ -378,10 +383,37 @@ def list_all_places():
         "website", "wp_post_id", "article_path", "postal_code", "country",
         "country_code", "region", "province", "municipality", "city",
         "district", "latitude", "longitude", "email", "email_source",
-        "business_status",
+        "business_status", "tipo_de_comida", "image_count",
     ]
     places = [dict(zip(keys, row)) for row in c.fetchall()]
     conn.close()
+
+    for place in places:
+        flags = []
+        if not any(
+            str(place.get(field) or "").strip()
+            for field in ("phone", "website", "email")
+        ):
+            flags.append("contact")
+        if (
+            not any(
+                str(place.get(field) or "").strip()
+                for field in ("municipality", "city")
+            )
+            or place.get("latitude") is None
+            or place.get("longitude") is None
+            or not str(place.get("postal_code") or "").strip()
+            or not str(place.get("country_code") or "").strip()
+        ):
+            flags.append("location")
+        if not place.get("image_count"):
+            flags.append("images")
+        if not str(place.get("tipo_de_comida") or "").strip():
+            flags.append("food_type")
+
+        place["incomplete_fields"] = flags
+        place["is_incomplete"] = bool(flags)
+
     return places
 
 def save_reviews_for_place(place_id, reviews):

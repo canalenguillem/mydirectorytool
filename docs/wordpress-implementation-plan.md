@@ -774,3 +774,18 @@ CPT al fallback del tema.
   y compararse su rendimiento en Search Console.
 - Inventario en
   `docs/inventories/2026-07-23-title-sample.md`.
+
+### Auditoría actualizada y filtro de incompletos del 23 de julio de 2026
+
+- WordPress contiene 272 restaurantes publicados.
+- El panel conserva 279 referencias marcadas como publicadas.
+- Diferencia reconciliada: ocho referencias a posts eliminados y un post
+  huérfano de WordPress; no se alteró la base de datos.
+- Auditoría actual: 23 sin galería, 11 sin contacto, 51 sin ubicación completa
+  y 68 títulos largos.
+- El panel incorpora la tarjeta `Incompletos` y filtros por contacto,
+  ubicación, imágenes y tipo de comida.
+- Cada ficha muestra etiquetas con las carencias concretas.
+- Despliegue validado manteniendo únicamente el puerto frontend `8091`.
+- Inventario en
+  `docs/inventories/2026-07-23-incomplete-data-filter.md`.

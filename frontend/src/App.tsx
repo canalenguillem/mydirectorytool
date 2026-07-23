@@ -21,6 +21,13 @@ function StatusBadge({ published }: { published: boolean }) {
   )
 }
 
+const incompleteLabels = {
+  contact: 'Sin contacto',
+  location: 'Ubicación incompleta',
+  images: 'Sin imágenes',
+  food_type: 'Sin tipo de comida',
+} as const
+
 function ActionButton({
   label,
   status,
@@ -219,6 +226,15 @@ function PlaceCard({ place, onRefresh }: { place: Place; onRefresh: () => void }
                 <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{place.tipo_de_comida}</span>
               )}
             </div>
+            {!!place.incomplete_fields?.length && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {place.incomplete_fields.map(field => (
+                  <span key={field} className="text-[10px] bg-red-50 text-red-700 px-2 py-0.5 rounded-full">
+                    {incompleteLabels[field]}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <span className="text-gray-400 text-lg mt-0.5">{expanded ? '▲' : '▼'}</span>
         </button>
@@ -439,8 +455,9 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [places, setPlaces] = useState<Place[]>([])
   const [loadingPlaces, setLoadingPlaces] = useState(true)
-  const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'published'>('all')
+  const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'published' | 'incomplete'>('all')
   const [maximumRating, setMaximumRating] = useState<string>('')
+  const [incompleteField, setIncompleteField] = useState<string>('')
   const [savedPlaceIds, setSavedPlaceIds] = useState<Set<string>>(new Set())
   const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null)
   const [queueBusy, setQueueBusy] = useState(false)
@@ -508,14 +525,20 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
     const matchesFilter =
       activeFilter === 'all' ? true :
       activeFilter === 'pending' ? !p.publicado_en_wp :
-      !!p.publicado_en_wp
+      activeFilter === 'published' ? !!p.publicado_en_wp :
+      !!p.is_incomplete
     const matchesQuery = !query.trim() || p.name.toLowerCase().includes(query.toLowerCase())
     const matchesRating = !maximumRating || p.rating < Number(maximumRating)
-    return matchesFilter && matchesQuery && matchesRating
+    const matchesIncompleteField =
+      activeFilter !== 'incomplete' ||
+      !incompleteField ||
+      p.incomplete_fields?.includes(incompleteField as 'contact' | 'location' | 'images' | 'food_type')
+    return matchesFilter && matchesQuery && matchesRating && matchesIncompleteField
   })
 
   const publishedCount = places.filter(p => p.publicado_en_wp).length
   const pendingCount = places.filter(p => !p.publicado_en_wp).length
+  const incompleteCount = places.filter(p => p.is_incomplete).length
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -578,11 +601,12 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {[
             { label: 'Total', count: places.length, key: 'all' as const, color: 'bg-white' },
             { label: 'Pendientes', count: pendingCount, key: 'pending' as const, color: 'bg-yellow-50' },
             { label: 'Publicados', count: publishedCount, key: 'published' as const, color: 'bg-green-50' },
+            { label: 'Incompletos', count: incompleteCount, key: 'incomplete' as const, color: 'bg-red-50' },
           ].map(({ label, count, key, color }) => (
             <button
               key={key}
@@ -594,6 +618,29 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
             </button>
           ))}
         </div>
+
+        {activeFilter === 'incomplete' && (
+          <div className="bg-white rounded-xl shadow-sm border border-red-100 p-3 flex items-center gap-3">
+            <label htmlFor="incomplete-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+              Falta
+            </label>
+            <select
+              id="incomplete-filter"
+              value={incompleteField}
+              onChange={event => setIncompleteField(event.target.value)}
+              className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-600"
+            >
+              <option value="">Cualquier dato</option>
+              <option value="contact">Contacto</option>
+              <option value="location">Ubicación completa</option>
+              <option value="images">Imágenes</option>
+              <option value="food_type">Tipo de comida</option>
+            </select>
+            <span className="text-xs text-gray-500 whitespace-nowrap">
+              {filteredPlaces.length} resultados
+            </span>
+          </div>
+        )}
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 flex items-center gap-3">
           <label htmlFor="rating-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
@@ -623,7 +670,13 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
         {/* Places list */}
         <section>
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            {activeFilter === 'all' ? 'Todos los lugares' : activeFilter === 'pending' ? 'Pendientes de publicar' : 'Publicados'}
+            {activeFilter === 'all'
+              ? 'Todos los lugares'
+              : activeFilter === 'pending'
+                ? 'Pendientes de publicar'
+                : activeFilter === 'published'
+                  ? 'Publicados'
+                  : 'Datos incompletos'}
           </h2>
           {loadingPlaces ? (
             <div className="text-center py-12">

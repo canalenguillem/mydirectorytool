@@ -22,6 +22,9 @@ export interface Place {
   email?: string
   email_source?: string
   business_status?: string
+  image_count?: number
+  incomplete_fields?: Array<'contact' | 'location' | 'images' | 'food_type'>
+  is_incomplete?: boolean
 }
 
 export interface SearchResult {

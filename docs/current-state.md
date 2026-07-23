@@ -38,6 +38,15 @@ El proyecto ya funciona como back office de un directorio gastronómico. Está d
 
 Google Places no proporciona correos electrónicos. No hay scraping de webs activo.
 
+### Control de calidad
+
+- Filtro de negocios con datos incompletos.
+- Subfiltros por contacto, ubicación, imágenes y tipo de comida.
+- Etiquetas visibles en cada ficha con las carencias concretas.
+- El estado se calcula desde los datos actuales y no se persiste de forma
+  redundante.
+- Auditoría reutilizable y de solo lectura sobre el contenido de WordPress.
+
 ### Contenido
 
 - Obtención y almacenamiento de reseñas.
@@ -91,6 +100,8 @@ Google Places no proporciona correos electrónicos. No hay scraping de webs acti
 - El correo no se obtiene automáticamente.
 - No existen páginas automáticas de ciudad, provincia o categoría.
 - No hay sincronización de cambios desde WordPress hacia la base local.
+- El contador de publicados del panel refleja el estado local; puede diferir de
+  WordPress si un post se elimina directamente en el CMS.
 - La API todavía necesita homogeneizar códigos HTTP, timeouts y errores.
 - Faltan pruebas automatizadas completas y CI.
 - La cola ejecuta tareas largas dentro del proceso del backend; una arquitectura de workers independiente será más robusta al crecer.
