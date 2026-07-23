@@ -554,21 +554,21 @@ Actualizar esta tabla después de cada sesión:
 | 2. Plugin y migración CPT | Completado | 2026-07-23 | Backup `2026-07-23_pre_plugin_activation`; tema `e12c0ce`; plugin `6a087af` | Plugin activo y migración verificada |
 | 3. Taxonomías | Completado | 2026-07-23 | Plugin `cd43c57` | Administración, REST, términos y archivos públicos verificados |
 | 4. Backfill histórico | Completado | 2026-07-23 | Backup `2026-07-23_pre_taxonomy_sample`; plugin `649c177` | 248 fichas procesadas; verificación idempotente sin cambios |
-| 5. Tema propio | En curso | 2026-07-23 | Tema `136d1ff` | Archivo genérico y tarjeta reutilizable desplegados |
+| 5. Tema propio | En curso | 2026-07-23 | Tema `7dc7b29` | Archivos, tarjeta y ficha individual reutilizables desplegados |
 | 6. SEO y Schema | Pendiente | | | |
 | 7. Pruebas | Pendiente | | | |
 
 ## 17. Próxima acción exacta
 
-Las páginas públicas de taxonomía están activas. El siguiente bloque continuará
-la fase del tema:
+La ficha individual y las galerías intercaladas están desplegadas. El siguiente
+bloque continuará la fase del tema:
 
-1. Mejorar `single-restaurante.php` para mostrar imagen destacada, ubicación,
-   tipo de comida, teléfono, web, mapa y enlaces a taxonomías.
-2. Extraer la galería y los datos de contacto a componentes reutilizables.
-3. Añadir migas de pan.
-4. Incorporar canonical y metadatos sociales sin duplicar los de otro plugin.
-5. Revisar accesibilidad, responsive y una muestra de fichas sin imagen.
+1. Incorporar canonical y metadatos sociales sin duplicar los de otro plugin.
+2. Revisar en navegador el responsive de fichas, tarjetas y mapas.
+3. Probar una muestra de fichas sin imagen, sin contacto y sin coordenadas.
+4. Extraer contacto y migas a componentes independientes cuando se añada el
+   segundo tipo de directorio.
+5. Añadir descripciones editoriales a los términos territoriales prioritarios.
 
 El fallback del tema se conservará durante la siguiente fase y se retirará en
 una versión posterior, una vez comprobada la estabilidad del plugin.
@@ -671,3 +671,20 @@ CPT al fallback del tema.
 - Archivo general, ficha individual y REST continúan con HTTP 200.
 - Inventario del despliegue en
   `docs/inventories/2026-07-23-public-taxonomy-archives.md`.
+
+### Ficha individual e imágenes intercaladas del 23 de julio de 2026
+
+- Tema actualizado, commit `7dc7b29`, versión 1.2.
+- Imagen destacada conservada al principio de la ficha.
+- Galería dividida en parejas.
+- Una pareja se inserta después de cada dos párrafos.
+- Si quedan imágenes cuando terminan los párrafos, se muestran al final sin
+  descartarlas.
+- En móvil las parejas pasan a una sola columna.
+- Se reutilizan los adjuntos de WordPress con `srcset` cuando están disponibles.
+- La ficha muestra taxonomías, contacto, migas de pan y mapa OpenStreetMap.
+- El mapa no necesita ni expone claves privadas.
+- Ficha de Burdo validada con cinco parejas intercaladas y HTTP 200.
+- Archivo y taxonomía de control continuaron con HTTP 200.
+- Inventario en
+  `docs/inventories/2026-07-23-interleaved-gallery.md`.
