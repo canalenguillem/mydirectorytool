@@ -37,6 +37,21 @@ export const api = {
   retryFailedQueue: () =>
     req<import('./types').QueueStatus>('/queue/retry-failed', { method: 'POST' }),
 
+  repairQueueStatus: () =>
+    req<import('./types').QueueStatus>('/repair-queue/status'),
+
+  startRepairQueue: (limit: number, intervalSeconds = 300) =>
+    req<import('./types').QueueStatus>(`/repair-queue/start?limit=${limit}&interval_seconds=${intervalSeconds}`, { method: 'POST' }),
+
+  pauseRepairQueue: () =>
+    req<import('./types').QueueStatus>('/repair-queue/pause', { method: 'POST' }),
+
+  resumeRepairQueue: () =>
+    req<import('./types').QueueStatus>('/repair-queue/resume', { method: 'POST' }),
+
+  retryFailedRepairQueue: () =>
+    req<import('./types').QueueStatus>('/repair-queue/retry-failed', { method: 'POST' }),
+
   search: (query: string) =>
     req<{ resultados: import('./types').SearchResult[] }>(`/places/search?query=${encodeURIComponent(query)}`),
 

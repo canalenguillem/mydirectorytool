@@ -188,6 +188,37 @@ def init_db():
         VALUES (1, 0, 300, NULL, strftime('%s', 'now'))
     """)
 
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS repair_queue_control (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        active INTEGER NOT NULL DEFAULT 0,
+        interval_seconds INTEGER NOT NULL DEFAULT 300,
+        next_run_at INTEGER,
+        updated_at INTEGER NOT NULL
+    )
+    """)
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS repair_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        place_id TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL DEFAULT 'pending',
+        attempts INTEGER NOT NULL DEFAULT 0,
+        max_attempts INTEGER NOT NULL DEFAULT 3,
+        last_error TEXT,
+        created_at INTEGER NOT NULL,
+        started_at INTEGER,
+        finished_at INTEGER,
+        FOREIGN KEY(place_id) REFERENCES place(place_id)
+    )
+    """)
+
+    c.execute("""
+        INSERT OR IGNORE INTO repair_queue_control
+            (id, active, interval_seconds, next_run_at, updated_at)
+        VALUES (1, 0, 300, NULL, strftime('%s', 'now'))
+    """)
+
 
     conn.commit()
     conn.close()

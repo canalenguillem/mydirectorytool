@@ -83,6 +83,14 @@ Google Places no proporciona correos electrónicos. No hay scraping de webs acti
 - Protección frente a dos workers locales simultáneos.
 - Estado, tiempo estimado y errores recientes en el panel.
 
+### Cola de reparación
+
+- Cola persistente separada para fichas incompletas.
+- Repara únicamente los datos o recursos que falten.
+- Una ficha cada cinco minutos y máximo de tres intentos.
+- Sincroniza ACF y vuelve a publicar únicamente posts eliminados.
+- Pausa, reanudación, errores recientes y reintentos desde el panel.
+
 ## Problemas resueltos durante el MVP
 
 - Resultados de búsqueda guardados automáticamente sin consentimiento.

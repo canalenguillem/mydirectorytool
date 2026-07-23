@@ -789,3 +789,15 @@ CPT al fallback del tema.
 - Despliegue validado manteniendo únicamente el puerto frontend `8091`.
 - Inventario en
   `docs/inventories/2026-07-23-incomplete-data-filter.md`.
+
+### Cola de reparación del 23 de julio de 2026
+
+- Cola independiente de la publicación normal.
+- Primer lote: 92 fichas incompletas, a una cada cinco minutos.
+- Corrige contacto, geografía, tipo de comida, imágenes y referencias borradas
+  según las carencias de cada ficha.
+- Backup de SQLite creado antes de iniciar.
+- Primera reparación validada con Ca'n Pintxo Restaurant: nuevo post 3775 y
+  HTTP 200.
+- La cola quedó activa con 91 trabajos pendientes y ningún fallo definitivo.
+- Inventario en `docs/inventories/2026-07-23-repair-queue.md`.

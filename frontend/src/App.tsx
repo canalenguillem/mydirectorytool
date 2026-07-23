@@ -402,11 +402,14 @@ function formatDuration(seconds: number) {
   return hours ? `${hours} h ${minutes} min` : `${minutes} min`
 }
 
-function QueuePanel({ status, busy, error, onAction }: {
+function QueuePanel({ status, busy, error, onAction, title, description, allLabel }: {
   status: QueueStatus | null
   busy: boolean
   error: string
   onAction: (action: 'test' | 'all' | 'pause' | 'resume' | 'retry') => void
+  title?: string
+  description?: string
+  allLabel?: string
 }) {
   if (!status) return null
   const remaining = status.pending + status.processing
@@ -418,8 +421,8 @@ function QueuePanel({ status, busy, error, onAction }: {
     <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold text-gray-900 text-sm">Publicación automática</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Un restaurante cada 5 minutos · máximo 3 intentos</p>
+          <h2 className="font-semibold text-gray-900 text-sm">{title || 'Publicación automática'}</h2>
+          <p className="text-xs text-gray-500 mt-0.5">{description || 'Un restaurante cada 5 minutos · máximo 3 intentos'}</p>
         </div>
         <span className={`text-xs px-2 py-1 rounded-full font-medium ${status.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
           {status.active ? 'Activa' : 'Pausada'}
@@ -451,9 +454,9 @@ function QueuePanel({ status, busy, error, onAction }: {
             Probar con 3 restaurantes
           </button>
         )}
-        {status.total > 0 && (
+        {(status.total > 0 || !!allLabel) && (
           <button disabled={busy} onClick={() => onAction('all')} className="min-h-11 rounded-lg bg-green-800 hover:bg-green-900 text-white text-sm font-semibold disabled:opacity-60">
-            Añadir todos los pendientes
+            {allLabel || 'Añadir todos los pendientes'}
           </button>
         )}
         {status.active ? (
@@ -502,6 +505,9 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
   const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null)
   const [queueBusy, setQueueBusy] = useState(false)
   const [queueError, setQueueError] = useState('')
+  const [repairQueueStatus, setRepairQueueStatus] = useState<QueueStatus | null>(null)
+  const [repairQueueBusy, setRepairQueueBusy] = useState(false)
+  const [repairQueueError, setRepairQueueError] = useState('')
 
   const loadPlaces = useCallback(async () => {
     try {
@@ -523,14 +529,24 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
     }
   }, [])
 
+  const loadRepairQueue = useCallback(async () => {
+    try {
+      setRepairQueueStatus(await api.repairQueueStatus())
+    } catch (e) {
+      setRepairQueueError(e instanceof Error ? e.message : String(e))
+    }
+  }, [])
+
   useEffect(() => {
     loadQueue()
+    loadRepairQueue()
     const timer = window.setInterval(() => {
       loadQueue()
+      loadRepairQueue()
       loadPlaces()
     }, 10000)
     return () => window.clearInterval(timer)
-  }, [loadQueue, loadPlaces])
+  }, [loadQueue, loadRepairQueue, loadPlaces])
 
   const queueAction = async (action: 'test' | 'all' | 'pause' | 'resume' | 'retry') => {
     setQueueBusy(true)
@@ -546,6 +562,23 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
       setQueueError(e instanceof Error ? e.message : String(e))
     } finally {
       setQueueBusy(false)
+    }
+  }
+
+  const repairQueueAction = async (action: 'test' | 'all' | 'pause' | 'resume' | 'retry') => {
+    setRepairQueueBusy(true)
+    setRepairQueueError('')
+    try {
+      const result = action === 'test' ? await api.startRepairQueue(3)
+        : action === 'all' ? await api.startRepairQueue(500)
+        : action === 'pause' ? await api.pauseRepairQueue()
+        : action === 'resume' ? await api.resumeRepairQueue()
+        : await api.retryFailedRepairQueue()
+      setRepairQueueStatus(result)
+    } catch (e) {
+      setRepairQueueError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setRepairQueueBusy(false)
     }
   }
 
@@ -707,6 +740,16 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
         </div>
 
         <QueuePanel status={queueStatus} busy={queueBusy} error={queueError} onAction={queueAction} />
+
+        <QueuePanel
+          status={repairQueueStatus}
+          busy={repairQueueBusy}
+          error={repairQueueError}
+          onAction={repairQueueAction}
+          title="Reparación automática"
+          description="Una ficha incompleta cada 5 minutos · máximo 3 intentos"
+          allLabel="Reparar todas las fichas incompletas"
+        />
 
         {/* Places list */}
         <section>
