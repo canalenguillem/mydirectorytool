@@ -881,6 +881,24 @@ El script `scripts/audit-wordpress-content.php` ya acepta el tipo de contenido
 como argumento y constituye la primera herramienta operativa reutilizable entre
 sectores.
 
+`scripts/propose-wordpress-titles.py` añade una segunda pieza reutilizable:
+combina el inventario de WordPress con la entidad de negocio, propone títulos y
+comprueba longitud y duplicados. Su salida es un informe; la futura interfaz
+multidirectorio deberá convertirlo en un flujo:
+
+```text
+Auditoría
+→ propuestas
+→ comparar título actual/nuevo
+→ aprobar o rechazar
+→ aplicar lote
+→ conservar slug
+→ registrar auditoría
+```
+
+La generación no debe tener permisos de escritura. La aplicación del lote será
+una acción separada, autenticada y reversible.
+
 ## 26. Política de contenido e indexación reutilizable
 
 Para cualquier sector:

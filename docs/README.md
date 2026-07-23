@@ -21,6 +21,7 @@ MyDirectoryTool es una herramienta para crear y mantener directorios de negocios
 - [Fase 0 · 23 de julio de 2026](inventories/2026-07-23-phase0.md): backup verificado, versiones, ACF, conteos y discrepancias detectadas.
 - [Plugin 0.1.0 · 23 de julio de 2026](inventories/2026-07-23-plugin-scaffold.md): esqueleto inactivo, validación PHP y commit local.
 - [Auditoría de contenido · 23 de julio de 2026](inventories/2026-07-23-content-quality-audit.md): títulos, extractos, datos incompletos, páginas débiles y política de indexación.
+- [Propuestas de títulos · 23 de julio de 2026](inventories/2026-07-23-title-proposals.md): informe sin escrituras para revisar títulos largos y fórmulas repetidas.
 
 ## Objetivo resumido
 

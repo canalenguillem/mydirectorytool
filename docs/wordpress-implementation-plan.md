@@ -740,3 +740,22 @@ CPT al fallback del tema.
 - No se generan nodos vacíos en los XML.
 - Inventario en
   `docs/inventories/2026-07-23-content-quality-audit.md`.
+
+### Propuestas de títulos del 23 de julio de 2026
+
+- La cola terminó un nuevo lote y el snapshot estable pasó a 269 fichas.
+- Auditoría repetida después de finalizar la cola.
+- 78 títulos superan 70 caracteres.
+- 56 títulos coinciden con fórmulas repetidas conocidas.
+- `scripts/propose-wordpress-titles.py` genera propuestas sin escribir.
+- Cruza cada post con el nombre real almacenado en SQLite.
+- Emparejamiento: 268 de 269 fichas; la excepción es el post huérfano ya
+  inventariado.
+- Resultado: 113 propuestas para revisión.
+- Ninguna propuesta supera 70 caracteres.
+- No existen grupos de propuestas duplicadas.
+- Se eliminan redundancias como repetir la localidad ya incluida en el nombre.
+- Se adapta la gramática de categorías como carne, tapas o hamburguesas.
+- No se modificaron títulos, contenidos, slugs ni URLs.
+- Inventario en
+  `docs/inventories/2026-07-23-title-proposals.md`.
