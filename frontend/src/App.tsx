@@ -59,7 +59,7 @@ function ActionButton({
   )
 }
 
-function PlacePanel({ place, onRefresh, onDelete, confirmDelete }: { place: Place; onRefresh: () => void; onDelete: () => void; confirmDelete: boolean }) {
+function PlacePanel({ place, onRefresh, onDelete, confirmDelete, deleteStatus }: { place: Place; onRefresh: () => void; onDelete: () => void; confirmDelete: boolean; deleteStatus: ActionStatus }) {
   const [reviewsStatus, setReviewsStatus] = useState<ActionStatus>({ type: 'idle' })
   const [articleStatus, setArticleStatus] = useState<ActionStatus>({ type: 'idle' })
   const [imagesStatus, setImagesStatus] = useState<ActionStatus>({ type: 'idle' })
@@ -174,16 +174,31 @@ function PlacePanel({ place, onRefresh, onDelete, confirmDelete }: { place: Plac
             Ver artículo en WordPress ↗
           </a>
         )}
-        {!place.publicado_en_wp && (
-          <div className="border-t border-gray-200 pt-2">
-            <button
-              onClick={onDelete}
-              className={`w-full min-h-10 px-4 py-2 rounded-lg text-sm font-medium transition-all ${confirmDelete ? 'bg-red-600 text-white' : 'bg-red-50 hover:bg-red-100 text-red-700'}`}
-            >
-              {confirmDelete ? '¿Confirmar eliminación?' : 'Eliminar lugar'}
-            </button>
-          </div>
-        )}
+        <div className="border-t border-gray-200 pt-2">
+          {confirmDelete && (
+            <p className="text-xs text-red-700 mb-2">
+              {place.publicado_en_wp
+                ? 'Se borrarán el artículo, sus fotos de WordPress y todos los archivos locales.'
+                : 'Se borrarán la ficha, la cola y todos sus archivos locales.'}
+            </p>
+          )}
+          <button
+            onClick={onDelete}
+            disabled={deleteStatus.type === 'loading'}
+            className={`w-full min-h-10 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-60 ${confirmDelete ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-50 hover:bg-red-100 text-red-700'}`}
+          >
+            {deleteStatus.type === 'loading'
+              ? 'Eliminando...'
+              : confirmDelete
+                ? 'Sí, eliminar definitivamente'
+                : place.publicado_en_wp
+                  ? 'Eliminar de WordPress y del panel'
+                  : 'Eliminar lugar y archivos'}
+          </button>
+          {deleteStatus.type === 'error' && (
+            <p className="text-xs text-red-600 mt-1">{deleteStatus.message}</p>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -193,13 +208,17 @@ function PlaceCard({ place, onRefresh }: { place: Place; onRefresh: () => void }
   const [expanded, setExpanded] = useState(false)
 
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleteStatus, setDeleteStatus] = useState<ActionStatus>({ type: 'idle' })
 
   const handleDelete = useCallback(async () => {
     if (!confirmDelete) { setConfirmDelete(true); return }
+    setDeleteStatus({ type: 'loading' })
     try {
       await api.deletePlace(place.place_id)
+      setDeleteStatus({ type: 'success' })
       onRefresh()
-    } catch {
+    } catch (e) {
+      setDeleteStatus({ type: 'error', message: e instanceof Error ? e.message : String(e) })
       setConfirmDelete(false)
     }
   }, [confirmDelete, place.place_id, onRefresh])
@@ -230,7 +249,7 @@ function PlaceCard({ place, onRefresh }: { place: Place; onRefresh: () => void }
         </div>
         <span className="text-gray-400 text-lg mt-0.5">{expanded ? '▲' : '▼'}</span>
       </button>
-      {expanded && <PlacePanel place={place} onRefresh={onRefresh} onDelete={handleDelete} confirmDelete={confirmDelete} />}
+      {expanded && <PlacePanel place={place} onRefresh={onRefresh} onDelete={handleDelete} confirmDelete={confirmDelete} deleteStatus={deleteStatus} />}
     </div>
   )
 }

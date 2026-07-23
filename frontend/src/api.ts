@@ -66,5 +66,10 @@ export const api = {
     req<{ message: string; post_id: number }>(`/blog/blog/full-publish?place_id=${place_id}`, { method: 'POST' }),
 
   deletePlace: (place_id: string) =>
-    req<{ message: string }>(`/places/places/delete?place_id=${place_id}`, { method: 'DELETE' }),
+    req<{
+      message: string
+      wordpress_post_id?: number
+      deleted_media: number[]
+      deleted_local_files: number
+    }>(`/places/places/delete?place_id=${encodeURIComponent(place_id)}`, { method: 'DELETE' }),
 }

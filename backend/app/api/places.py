@@ -196,35 +196,9 @@ def set_featured_random(place_id: str):
 
 @router.delete("/places/delete")
 def delete_place_complet(place_id: str):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+    from app.services.place_deletion import delete_place_completely
 
-    # Comprovar si existeix
-    c.execute("SELECT name FROM place WHERE place_id = ?", (place_id,))
-    row = c.fetchone()
-    if not row:
-        conn.close()
-        return {"error": f"No s'ha trobat cap entrada amb place_id {place_id}"}
-
-    nom = row[0]
-
-    # Esborrar de totes les taules relacionades
-    taules = [
-        "place",
-        "place_image",
-        "place_featured_image",
-        "review",
-        "review_text"
-    ]
-
-    for taula in taules:
-        c.execute(f"DELETE FROM {taula} WHERE place_id = ?", (place_id,))
-
-    conn.commit()
-    conn.close()
-
-    return {"message": f"S'ha eliminat completament {nom} ({place_id}) de la base de dades"}
-
+    return delete_place_completely(place_id)
 
 
 
