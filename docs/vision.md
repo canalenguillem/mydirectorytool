@@ -85,3 +85,6 @@ Directorio
             ├── Categorías o servicios
             └── Fichas de negocios
 ```
+
+La evolución desde el MVP gastronómico hasta este producto está definida en
+[Transformación de MyDirectoryTool](mydirectorytool-transformation-plan.md).

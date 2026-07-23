@@ -103,3 +103,7 @@ Cuando termine la cola actual, el orden recomendado es:
 ## Definición de producto a largo plazo
 
 MyDirectoryTool será una plataforma privada para configurar, poblar, publicar y mantener directorios verticales, con conectores de fuentes y CMS reemplazables y automatización supervisada de extremo a extremo.
+
+El plan técnico, la migración compatible y los criterios para lanzar el segundo
+directorio están detallados en
+[Transformación de MyDirectoryTool](mydirectorytool-transformation-plan.md).

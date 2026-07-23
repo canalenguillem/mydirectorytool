@@ -13,6 +13,7 @@ MyDirectoryTool es una herramienta para crear y mantener directorios de negocios
 7. [Hoja de ruta](roadmap.md): fases recomendadas para convertir el MVP en una plataforma.
 8. [Arquitectura de WordPress](wordpress-integration.md): reparto estable entre la herramienta, el plugin y el tema propio.
 9. [Plan de implementación de WordPress](wordpress-implementation-plan.md): runbook completo de backups, plugin, taxonomías, tema propio, SEO, pruebas y reversión.
+10. [Transformación de MyDirectoryTool](mydirectorytool-transformation-plan.md): evolución del MVP actual a una plataforma multidirectorio con asistente de alta.
 
 ## Objetivo resumido
 
