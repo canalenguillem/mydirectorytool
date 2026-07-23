@@ -553,22 +553,21 @@ Actualizar esta tabla después de cada sesión:
 | 1. Código WordPress en Git | Completado | 2026-07-23 | Tema `e12c0ce`; plugin `6a087af` | Ambos repositorios publicados |
 | 2. Plugin y migración CPT | Completado | 2026-07-23 | Backup `2026-07-23_pre_plugin_activation`; tema `e12c0ce`; plugin `6a087af` | Plugin activo y migración verificada |
 | 3. Taxonomías | En curso | 2026-07-23 | Plugin `15fd83c` | Registradas en administración y REST; URLs y backfill pendientes |
-| 4. Backfill histórico | Pendiente | | | |
+| 4. Backfill histórico | Completado | 2026-07-23 | Backup `2026-07-23_pre_taxonomy_sample`; plugin `649c177` | 248 fichas procesadas; verificación idempotente sin cambios |
 | 5. Tema propio | Pendiente | | | |
 | 6. SEO y Schema | Pendiente | | | |
 | 7. Pruebas | Pendiente | | | |
 
 ## 17. Próxima acción exacta
 
-Las taxonomías ya están registradas y el primer inventario `dry-run` está
-documentado. El siguiente bloque debe completar únicamente:
+El backfill histórico está completado. El siguiente bloque debe preparar la
+navegación pública sin activarla todavía:
 
-1. Incorporar al plugin un backfill reutilizable con modo `dry-run`.
-2. Aplicar solo las equivalencias aprobadas de provincia y tipo de comida.
-3. Mantener sin término las fichas con ACF territorial vacío.
-4. Ejecutar una muestra inicial de 10 fichas y comprobar REST y administración.
-5. Repetir de forma idempotente y por lotes únicamente después de revisar la
-   muestra.
+1. Definir los slugs públicos definitivos de las tres taxonomías.
+2. Crear las plantillas territoriales y de tipo de comida en el tema.
+3. Añadir títulos, paginación, enlaces internos y canonical adecuados.
+4. Probar las plantillas con URLs no indexables o en el entorno local.
+5. Habilitar los rewrites públicos solo cuando las plantillas estén listas.
 
 El fallback del tema se conservará durante la siguiente fase y se retirará en
 una versión posterior, una vez comprobada la estabilidad del plugin.
@@ -631,3 +630,24 @@ CPT al fallback del tema.
 - Se conservaron los 248 restaurantes y las páginas públicas verificadas.
 - El inventario de los campos ACF está en
   `docs/inventories/2026-07-23-taxonomy-dry-run.md`.
+
+### Backfill histórico del 23 de julio de 2026
+
+- Plugin actualizado a la versión 0.3.0, commit `649c177`.
+- Motor paginado, idempotente y con modo `dry-run`.
+- Backup SQL previo:
+  `/home/guillem/backups/dondecomerbien/2026-07-23_pre_taxonomy_sample/`.
+- Primera muestra de 10 fichas antiguas: sin ubicación, tipo asignado y campos
+  vacíos omitidos correctamente.
+- Segunda muestra de 10 fichas territoriales: municipio, provincia y tipo
+  asignados correctamente.
+- Backfill completo ejecutado en lotes sobre 248 fichas.
+- Dry-run global posterior: 248 sin cambios y cero errores.
+- Resultado: 67 municipios con 197 asignaciones, 18 provincias con 198
+  asignaciones y 39 tipos de comida con 249 asignaciones.
+- Las 249 asignaciones de tipo son correctas: una ficha recibió dos términos
+  desde `mediterránea-italiana`.
+- Portada, archivo, ficha y REST continuaron respondiendo HTTP 200.
+- No se detectaron errores PHP en los logs.
+- Informe completo en
+  `docs/inventories/2026-07-23-taxonomy-backfill.md`.
