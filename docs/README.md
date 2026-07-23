@@ -16,6 +16,10 @@ MyDirectoryTool es una herramienta para crear y mantener directorios de negocios
 10. [Transformación de MyDirectoryTool](mydirectorytool-transformation-plan.md): evolución del MVP actual a una plataforma multidirectorio con asistente de alta.
 11. [Migración a PostgreSQL](postgresql-migration-plan.md): estrategia ensayada para sustituir SQLite sin afectar WordPress ni perder la cola.
 
+## Inventarios y puntos de restauración
+
+- [Fase 0 · 23 de julio de 2026](inventories/2026-07-23-phase0.md): backup verificado, versiones, ACF, conteos y discrepancias detectadas.
+
 ## Objetivo resumido
 
 ```text

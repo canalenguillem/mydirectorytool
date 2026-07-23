@@ -549,7 +549,7 @@ Actualizar esta tabla después de cada sesión:
 
 | Fase | Estado | Fecha | Commit / backup | Notas |
 |---|---|---|---|---|
-| 0. Backup e inventario | Pendiente | | | |
+| 0. Backup e inventario | Completado | 2026-07-23 | Backup `2026-07-23_phase0` | Ver inventario versionado |
 | 1. Código WordPress en Git | Pendiente | | | |
 | 2. Plugin y migración CPT | Pendiente | | | |
 | 3. Taxonomías | Pendiente | | | |
