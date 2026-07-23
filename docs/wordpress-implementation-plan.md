@@ -552,22 +552,23 @@ Actualizar esta tabla después de cada sesión:
 | 0. Backup e inventario | Completado | 2026-07-23 | Backup `2026-07-23_phase0` | Ver inventario versionado |
 | 1. Código WordPress en Git | Completado | 2026-07-23 | Tema `e12c0ce`; plugin `6a087af` | Ambos repositorios publicados |
 | 2. Plugin y migración CPT | Completado | 2026-07-23 | Backup `2026-07-23_pre_plugin_activation`; tema `e12c0ce`; plugin `6a087af` | Plugin activo y migración verificada |
-| 3. Taxonomías | En curso | 2026-07-23 | Plugin `15fd83c` | Registradas en administración y REST; URLs y backfill pendientes |
+| 3. Taxonomías | Completado | 2026-07-23 | Plugin `cd43c57` | Administración, REST, términos y archivos públicos verificados |
 | 4. Backfill histórico | Completado | 2026-07-23 | Backup `2026-07-23_pre_taxonomy_sample`; plugin `649c177` | 248 fichas procesadas; verificación idempotente sin cambios |
-| 5. Tema propio | Pendiente | | | |
+| 5. Tema propio | En curso | 2026-07-23 | Tema `136d1ff` | Archivo genérico y tarjeta reutilizable desplegados |
 | 6. SEO y Schema | Pendiente | | | |
 | 7. Pruebas | Pendiente | | | |
 
 ## 17. Próxima acción exacta
 
-El backfill histórico está completado. El siguiente bloque debe preparar la
-navegación pública sin activarla todavía:
+Las páginas públicas de taxonomía están activas. El siguiente bloque continuará
+la fase del tema:
 
-1. Definir los slugs públicos definitivos de las tres taxonomías.
-2. Crear las plantillas territoriales y de tipo de comida en el tema.
-3. Añadir títulos, paginación, enlaces internos y canonical adecuados.
-4. Probar las plantillas con URLs no indexables o en el entorno local.
-5. Habilitar los rewrites públicos solo cuando las plantillas estén listas.
+1. Mejorar `single-restaurante.php` para mostrar imagen destacada, ubicación,
+   tipo de comida, teléfono, web, mapa y enlaces a taxonomías.
+2. Extraer la galería y los datos de contacto a componentes reutilizables.
+3. Añadir migas de pan.
+4. Incorporar canonical y metadatos sociales sin duplicar los de otro plugin.
+5. Revisar accesibilidad, responsive y una muestra de fichas sin imagen.
 
 El fallback del tema se conservará durante la siguiente fase y se retirará en
 una versión posterior, una vez comprobada la estabilidad del plugin.
@@ -651,3 +652,22 @@ CPT al fallback del tema.
 - No se detectaron errores PHP en los logs.
 - Informe completo en
   `docs/inventories/2026-07-23-taxonomy-backfill.md`.
+
+### Archivos públicos de taxonomía del 23 de julio de 2026
+
+- Tema actualizado, commit `136d1ff`.
+- Plugin actualizado a la versión 0.4.1, commit `cd43c57`.
+- Tarjeta de restaurante reutilizable por archivo general y taxonomías.
+- Fallback visual para fichas sin imagen destacada.
+- Plantilla compartida `taxonomy.php`.
+- H1 contextual por municipio, provincia y tipo de comida.
+- Paginación de 12 restaurantes por página.
+- Las reglas específicas preceden a las reglas de adjuntos del CPT.
+- URLs verificadas:
+  - `/restaurantes/municipio/soller/`
+  - `/restaurantes/provincia/illes-balears/`
+  - `/restaurantes/tipo-comida/mediterranea/`
+- Primera página y página 2 verificadas con HTTP 200.
+- Archivo general, ficha individual y REST continúan con HTTP 200.
+- Inventario del despliegue en
+  `docs/inventories/2026-07-23-public-taxonomy-archives.md`.
