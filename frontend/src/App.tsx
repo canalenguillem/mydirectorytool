@@ -59,7 +59,7 @@ function ActionButton({
   )
 }
 
-function PlacePanel({ place, onRefresh, onDelete, confirmDelete, deleteStatus }: { place: Place; onRefresh: () => void; onDelete: () => void; confirmDelete: boolean; deleteStatus: ActionStatus }) {
+function PlacePanel({ place, onRefresh }: { place: Place; onRefresh: () => void }) {
   const [reviewsStatus, setReviewsStatus] = useState<ActionStatus>({ type: 'idle' })
   const [articleStatus, setArticleStatus] = useState<ActionStatus>({ type: 'idle' })
   const [imagesStatus, setImagesStatus] = useState<ActionStatus>({ type: 'idle' })
@@ -174,31 +174,6 @@ function PlacePanel({ place, onRefresh, onDelete, confirmDelete, deleteStatus }:
             Ver artículo en WordPress ↗
           </a>
         )}
-        <div className="border-t border-gray-200 pt-2">
-          {confirmDelete && (
-            <p className="text-xs text-red-700 mb-2">
-              {place.publicado_en_wp
-                ? 'Se borrarán el artículo, sus fotos de WordPress y todos los archivos locales.'
-                : 'Se borrarán la ficha, la cola y todos sus archivos locales.'}
-            </p>
-          )}
-          <button
-            onClick={onDelete}
-            disabled={deleteStatus.type === 'loading'}
-            className={`w-full min-h-10 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-60 ${confirmDelete ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-50 hover:bg-red-100 text-red-700'}`}
-          >
-            {deleteStatus.type === 'loading'
-              ? 'Eliminando...'
-              : confirmDelete
-                ? 'Sí, eliminar definitivamente'
-                : place.publicado_en_wp
-                  ? 'Eliminar de WordPress y del panel'
-                  : 'Eliminar lugar y archivos'}
-          </button>
-          {deleteStatus.type === 'error' && (
-            <p className="text-xs text-red-600 mt-1">{deleteStatus.message}</p>
-          )}
-        </div>
       </div>
     </div>
   )
@@ -207,11 +182,9 @@ function PlacePanel({ place, onRefresh, onDelete, confirmDelete, deleteStatus }:
 function PlaceCard({ place, onRefresh }: { place: Place; onRefresh: () => void }) {
   const [expanded, setExpanded] = useState(false)
 
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteStatus, setDeleteStatus] = useState<ActionStatus>({ type: 'idle' })
 
   const handleDelete = useCallback(async () => {
-    if (!confirmDelete) { setConfirmDelete(true); return }
     setDeleteStatus({ type: 'loading' })
     try {
       await api.deletePlace(place.place_id)
@@ -219,37 +192,53 @@ function PlaceCard({ place, onRefresh }: { place: Place; onRefresh: () => void }
       onRefresh()
     } catch (e) {
       setDeleteStatus({ type: 'error', message: e instanceof Error ? e.message : String(e) })
-      setConfirmDelete(false)
     }
-  }, [confirmDelete, place.place_id, onRefresh])
+  }, [place.place_id, onRefresh])
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full text-left p-4 flex items-start justify-between gap-3"
-      >
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-gray-900 text-sm">{place.name}</h3>
-            <StatusBadge published={!!place.publicado_en_wp} />
-          </div>
-          <p className="text-xs text-gray-500 mt-0.5 truncate">{place.address}</p>
-          {(place.city || place.postal_code) && (
-            <p className="text-[11px] text-gray-500 mt-0.5">
-              {[place.city, place.postal_code].filter(Boolean).join(' · ')}
-            </p>
-          )}
-          <div className="flex items-center gap-2 mt-1">
-            <StarRating rating={place.rating} />
-            {place.tipo_de_comida && (
-              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{place.tipo_de_comida}</span>
+      <div className="flex items-stretch">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex-1 min-w-0 text-left p-4 flex items-start justify-between gap-3"
+        >
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-gray-900 text-sm">{place.name}</h3>
+              <StatusBadge published={!!place.publicado_en_wp} />
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5 truncate">{place.address}</p>
+            {(place.city || place.postal_code) && (
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                {[place.city, place.postal_code].filter(Boolean).join(' · ')}
+              </p>
             )}
+            <div className="flex items-center gap-2 mt-1">
+              <StarRating rating={place.rating} />
+              {place.tipo_de_comida && (
+                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{place.tipo_de_comida}</span>
+              )}
+            </div>
           </div>
-        </div>
-        <span className="text-gray-400 text-lg mt-0.5">{expanded ? '▲' : '▼'}</span>
-      </button>
-      {expanded && <PlacePanel place={place} onRefresh={onRefresh} onDelete={handleDelete} confirmDelete={confirmDelete} deleteStatus={deleteStatus} />}
+          <span className="text-gray-400 text-lg mt-0.5">{expanded ? '▲' : '▼'}</span>
+        </button>
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleteStatus.type === 'loading'}
+          aria-label={`Eliminar ${place.name}`}
+          title="Eliminar definitivamente"
+          className="w-12 shrink-0 border-l border-gray-100 text-red-500 hover:text-white hover:bg-red-600 transition-colors flex items-center justify-center disabled:opacity-50"
+        >
+          {deleteStatus.type === 'loading'
+            ? <span className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+            : <span className="text-xl font-bold" aria-hidden="true">×</span>}
+        </button>
+      </div>
+      {deleteStatus.type === 'error' && (
+        <p className="text-xs text-red-600 bg-red-50 border-t border-red-100 px-4 py-2">{deleteStatus.message}</p>
+      )}
+      {expanded && <PlacePanel place={place} onRefresh={onRefresh} />}
     </div>
   )
 }
