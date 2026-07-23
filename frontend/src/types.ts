@@ -23,7 +23,7 @@ export interface Place {
   email_source?: string
   business_status?: string
   image_count?: number
-  incomplete_fields?: Array<'contact' | 'location' | 'images' | 'food_type'>
+  incomplete_fields?: Array<'contact' | 'location' | 'images' | 'food_type' | 'wordpress_link'>
   is_incomplete?: boolean
 }
 

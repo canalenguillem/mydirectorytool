@@ -26,6 +26,7 @@ const incompleteLabels = {
   location: 'Ubicación incompleta',
   images: 'Sin imágenes',
   food_type: 'Sin tipo de comida',
+  wordpress_link: 'Sin artículo en WordPress',
 } as const
 
 function ActionButton({
@@ -532,7 +533,7 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
     const matchesIncompleteField =
       activeFilter !== 'incomplete' ||
       !incompleteField ||
-      p.incomplete_fields?.includes(incompleteField as 'contact' | 'location' | 'images' | 'food_type')
+      p.incomplete_fields?.includes(incompleteField as 'contact' | 'location' | 'images' | 'food_type' | 'wordpress_link')
     return matchesFilter && matchesQuery && matchesRating && matchesIncompleteField
   })
 
@@ -635,6 +636,7 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
               <option value="location">Ubicación completa</option>
               <option value="images">Imágenes</option>
               <option value="food_type">Tipo de comida</option>
+              <option value="wordpress_link">Artículo en WordPress</option>
             </select>
             <span className="text-xs text-gray-500 whitespace-nowrap">
               {filteredPlaces.length} resultados

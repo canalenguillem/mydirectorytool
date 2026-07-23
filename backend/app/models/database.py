@@ -410,6 +410,12 @@ def list_all_places():
             flags.append("images")
         if not str(place.get("tipo_de_comida") or "").strip():
             flags.append("food_type")
+        if (
+            place.get("publicado_en_wp")
+            and place.get("wp_post_id")
+            and not str(place.get("article_path") or "").strip()
+        ):
+            flags.append("wordpress_link")
 
         place["incomplete_fields"] = flags
         place["is_incomplete"] = bool(flags)

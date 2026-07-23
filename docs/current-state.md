@@ -42,6 +42,7 @@ Google Places no proporciona correos electrónicos. No hay scraping de webs acti
 
 - Filtro de negocios con datos incompletos.
 - Subfiltros por contacto, ubicación, imágenes y tipo de comida.
+- Detección de referencias publicadas que han perdido su artículo en WordPress.
 - Etiquetas visibles en cada ficha con las carencias concretas.
 - El estado se calcula desde los datos actuales y no se persiste de forma
   redundante.

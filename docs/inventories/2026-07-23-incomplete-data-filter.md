@@ -59,6 +59,8 @@ Categorías:
   país;
 - imágenes: no existen imágenes locales registradas;
 - tipo de comida: el campo está vacío.
+- artículo en WordPress: está marcado como publicado y tiene `wp_post_id`, pero
+  no conserva una URL válida en el panel.
 
 Estado local actual:
 
@@ -80,6 +82,17 @@ El frontend incorpora:
 - contador de resultados;
 - etiquetas rojas en cada ficha indicando exactamente qué falta.
 
+## Reparación de enlaces
+
+El post 42, `Reštaurácia Divný Janko`, existía en WordPress pero tenía
+`article_path` vacío. Su permalink público se recuperó mediante la API de
+WordPress y se guardó en SQLite. El botón `Ver artículo en WordPress` vuelve a
+mostrarse para esa ficha.
+
+Los otros ocho registros sin URL son las referencias a posts eliminados ya
+inventariadas. Se muestran con la etiqueta `Sin artículo en WordPress` y no se
+les fabrica un enlace que conduciría a un 404.
+
 ## Validación y despliegue
 
 - Backend compilado con Python sin errores.
@@ -89,4 +102,3 @@ El frontend incorpora:
 - Página principal servida correctamente.
 - API sin sesión devuelve HTTP 401.
 - Contenedores `backend` y `frontend` activos.
-
