@@ -43,6 +43,8 @@ Resultado: las fichas dejan de estar aisladas y forman un directorio navegable.
 
 ## Fase 3: núcleo multidirectorio
 
+- Introducir SQLAlchemy y Alembic manteniendo primero SQLite.
+- Ensayar y ejecutar la migración a PostgreSQL mediante el runbook documentado.
 - Crear entidad `directory`.
 - Registrar Dónde comer bien como primer proyecto.
 - Asociar negocios, plantillas, cola y publicaciones a `directory_id`.
@@ -81,7 +83,7 @@ No se debe mezclar automáticamente publicación editorial con campañas de cont
 
 ## Fase 6: escalabilidad
 
-- PostgreSQL.
+- Optimización, backups y observabilidad de PostgreSQL ya migrado.
 - Worker separado con cola dedicada.
 - Programación distribuida.
 - Almacenamiento de objetos para imágenes.

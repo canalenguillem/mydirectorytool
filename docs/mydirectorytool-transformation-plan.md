@@ -695,6 +695,8 @@ No se debe activar una automatización masiva sin estimación de volumen y coste
 
 ### Fase B: `directory` sin cambiar la interfaz
 
+- Introducir repositorios y migraciones formales todavía sobre SQLite.
+- Preparar y ensayar la migración a PostgreSQL según el runbook específico.
 - Crear tablas multidirectorio.
 - Migrar datos existentes al directorio por defecto.
 - Introducir contexto de directorio en backend y cola.
@@ -829,3 +831,7 @@ No crear todavía el asistente visual. El siguiente bloque debe:
 7. Probar que el comportamiento visible no cambia.
 
 Solo después se añadirá el selector de directorio.
+
+La migración de motor está detallada en
+[Migración a PostgreSQL](postgresql-migration-plan.md) y no debe ejecutarse
+mientras la publicación masiva actual siga en curso.

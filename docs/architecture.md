@@ -115,7 +115,8 @@ El volumen `./data:/data` mantiene la base y los archivos fuera de los contenedo
 
 Cuando aumenten volumen y proyectos:
 
-- Migrar de SQLite a PostgreSQL.
+- Migrar de SQLite a PostgreSQL siguiendo el
+  [runbook de migración](postgresql-migration-plan.md).
 - Separar API y worker.
 - Introducir migraciones versionadas.
 - Cifrar credenciales de cada directorio.

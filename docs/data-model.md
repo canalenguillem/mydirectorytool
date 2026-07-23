@@ -177,3 +177,11 @@ last_error
 - Una reseña debe tener una clave estable para evitar duplicados.
 - Una publicación completada debe ser idempotente.
 - Todo dato enriquecido debe guardar fuente y fecha de actualización.
+
+## Motor de persistencia futuro
+
+El MVP continúa en SQLite mientras se estabiliza la publicación actual. El
+nuevo modelo multidirectorio se desplegará sobre PostgreSQL después de introducir
+una capa de repositorios y migraciones Alembic. WordPress conservará su base
+MySQL independiente. El procedimiento completo está en
+[Migración a PostgreSQL](postgresql-migration-plan.md).

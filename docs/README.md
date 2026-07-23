@@ -14,6 +14,7 @@ MyDirectoryTool es una herramienta para crear y mantener directorios de negocios
 8. [Arquitectura de WordPress](wordpress-integration.md): reparto estable entre la herramienta, el plugin y el tema propio.
 9. [Plan de implementación de WordPress](wordpress-implementation-plan.md): runbook completo de backups, plugin, taxonomías, tema propio, SEO, pruebas y reversión.
 10. [Transformación de MyDirectoryTool](mydirectorytool-transformation-plan.md): evolución del MVP actual a una plataforma multidirectorio con asistente de alta.
+11. [Migración a PostgreSQL](postgresql-migration-plan.md): estrategia ensayada para sustituir SQLite sin afectar WordPress ni perder la cola.
 
 ## Objetivo resumido
 
