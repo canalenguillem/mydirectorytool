@@ -550,7 +550,7 @@ Actualizar esta tabla después de cada sesión:
 | Fase | Estado | Fecha | Commit / backup | Notas |
 |---|---|---|---|---|
 | 0. Backup e inventario | Completado | 2026-07-23 | Backup `2026-07-23_phase0` | Ver inventario versionado |
-| 1. Código WordPress en Git | Pendiente | | | |
+| 1. Código WordPress en Git | En curso | 2026-07-23 | Plugin `3de04e8` | Tema publicado; plugin local pendiente de crear remoto y push |
 | 2. Plugin y migración CPT | Pendiente | | | |
 | 3. Taxonomías | Pendiente | | | |
 | 4. Backfill histórico | Pendiente | | | |
@@ -568,3 +568,19 @@ No empezar todavía por el diseño. La próxima sesión debe completar únicamen
 
 Al terminar esos tres puntos se revisará el diff y se decidirá la activación del
 plugin en una sesión separada.
+
+### Avance del 23 de julio de 2026
+
+- Backup e inventario completados y verificados.
+- Tema activo publicado en su repositorio independiente.
+- Plugin `mydirectorytool-core` 0.1.0 instalado en WordPress pero inactivo.
+- Todos sus archivos PHP validados con PHP 8.2.
+- WordPress lo detecta y conserva 248 restaurantes publicados.
+- Repositorio local del plugin inicializado en `main`.
+- Commit inicial del plugin: `3de04e8`.
+- Remoto configurado:
+  `git@github.com:canalenguillem/mydirectorytool-wp-plugin.git`.
+- Pendiente: crear el repositorio vacío en GitHub y ejecutar el primer push.
+
+No activar el plugin todavía. La versión 0.1.0 es un esqueleto sin hooks
+funcionales; la migración del CPT corresponde a una sesión posterior.
