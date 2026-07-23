@@ -199,11 +199,16 @@ function PlacePanel({ place, onRefresh }: { place: Place; onRefresh: () => void 
               onClick={publish}
               variant="primary"
             />
-            {!place.publicado_en_wp && (
-              <div className="border-t border-gray-200 pt-2">
-                <ActionButton label="🚀 Pipeline completo (1→2→3→4)" status={pipelineStatus} onClick={runPipeline} variant="pipeline" />
-              </div>
-            )}
+            <div className="border-t border-gray-200 pt-2">
+              <ActionButton
+                label={place.publicado_en_wp
+                  ? '🚀 Pipeline completo: reparar y volver a publicar'
+                  : '🚀 Pipeline completo (1→2→3→4)'}
+                status={pipelineStatus}
+                onClick={runPipeline}
+                variant="pipeline"
+              />
+            </div>
           </>
         )}
         {place.publicado_en_wp && place.article_path && (

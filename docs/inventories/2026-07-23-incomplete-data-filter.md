@@ -104,9 +104,16 @@ les fabrica un enlace que conduciría a un 404.
 
 Para estas referencias desincronizadas, el panel muestra
 `Volver a publicar en WordPress`. La acción reutiliza el artículo y las imágenes
-locales, crea un post nuevo y sustituye el ID y la URL históricos. El pipeline
-completo no se ofrece en este caso para no repetir innecesariamente reseñas,
-generación e imágenes.
+locales, crea un post nuevo y sustituye el ID y la URL históricos.
+
+También se ofrece `Pipeline completo: reparar y volver a publicar`, equivalente
+al flujo de una publicación nueva:
+
+1. obtiene o reutiliza las reseñas;
+2. genera o recupera el artículo en caché;
+3. descarga y registra imágenes sin duplicarlas;
+4. selecciona la destacada;
+5. crea el nuevo post y guarda su ID y URL.
 
 ## Validación y despliegue
 
