@@ -551,7 +551,7 @@ Actualizar esta tabla después de cada sesión:
 |---|---|---|---|---|
 | 0. Backup e inventario | Completado | 2026-07-23 | Backup `2026-07-23_phase0` | Ver inventario versionado |
 | 1. Código WordPress en Git | Completado | 2026-07-23 | Tema `e12c0ce`; plugin `6a087af` | Ambos repositorios publicados |
-| 2. Plugin y migración CPT | En curso | 2026-07-23 | Tema `e12c0ce`; plugin `6a087af` | Registro compatible preparado; plugin aún inactivo |
+| 2. Plugin y migración CPT | Completado | 2026-07-23 | Backup `2026-07-23_pre_plugin_activation`; tema `e12c0ce`; plugin `6a087af` | Plugin activo y migración verificada |
 | 3. Taxonomías | Pendiente | | | |
 | 4. Backfill histórico | Pendiente | | | |
 | 5. Tema propio | Pendiente | | | |
@@ -560,18 +560,18 @@ Actualizar esta tabla después de cada sesión:
 
 ## 17. Próxima acción exacta
 
-No empezar todavía por el diseño ni por las taxonomías. El siguiente bloque debe
-completar únicamente:
+La migración del CPT ya está activa y verificada. El siguiente bloque será la
+fase 3, taxonomías, pero debe empezar sin modificar todavía los 248 contenidos:
 
-1. Crear un segundo backup, más pequeño, inmediatamente anterior a la activación.
-2. Activar `mydirectorytool-core` en una ventana controlada.
-3. Regenerar las reglas de enlaces permanentes mediante el hook de activación.
-4. Verificar conteos, administración, archivo, una ficha y la ruta REST.
-5. Confirmar que el tema aplica su fallback y ya no vuelve a registrar el CPT.
-6. Si alguna comprobación falla, desactivar el plugin y ejecutar el rollback.
+1. Definir nombres, slugs y jerarquía de municipio, provincia y tipo de comida.
+2. Registrar las taxonomías en el plugin con exposición REST.
+3. Preparar un informe `dry-run` que traduzca los campos ACF actuales a términos.
+4. Revisar valores vacíos, variantes y ambigüedades antes del backfill.
+5. Activar los archivos públicos de taxonomía solo cuando sus slugs y plantillas
+   estén aprobados.
 
-No se retirará el fallback del tema hasta que la activación haya quedado
-verificada y estable.
+El fallback del tema se conservará durante la siguiente fase y se retirará en
+una versión posterior, una vez comprobada la estabilidad del plugin.
 
 ### Avance del 23 de julio de 2026
 
@@ -600,5 +600,21 @@ verificada y estable.
   tema activo `dondecomerbien-theme`, archivo, ficha y REST con HTTP 200.
 - Commits publicados: tema `e12c0ce`; plugin `6a087af`.
 
-No activar el plugin todavía. El código está preparado, pero falta el backup
-inmediatamente anterior y la prueba de activación controlada descrita arriba.
+### Activación controlada del 23 de julio de 2026
+
+- Backup previo creado en
+  `/home/guillem/backups/dondecomerbien/2026-07-23_pre_plugin_activation/`.
+- El backup contiene el volcado SQL, el tema y el plugin.
+- El volcado se generó con `--no-tablespaces` y finalizó correctamente.
+- Las firmas SHA-256 y los archivos comprimidos fueron verificados.
+- `mydirectorytool-core` quedó activo.
+- Prioridad del registro del plugin: 5.
+- Prioridad del fallback del tema: 10.
+- Se conservaron 248 restaurantes publicados.
+- Home, archivo, ficha de muestra y endpoint REST respondieron HTTP 200.
+- El CPT conserva el slug `restaurantes`, archivo público y REST activo.
+- No aparecieron errores PHP en los logs de la ventana de activación.
+
+La fase 2 se considera completada. El rollback sigue disponible mediante el
+backup anterior y la desactivación del plugin, que devolvería el registro del
+CPT al fallback del tema.
