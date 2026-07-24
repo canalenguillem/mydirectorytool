@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from './api'
-import type { Place, QueueStatus, SearchResult } from './types'
+import type { Place, QueueStatus, SearchResult, UsageSummary } from './types'
 
 type ActionStatus = { type: 'idle' | 'loading' | 'success' | 'error'; message?: string }
 
@@ -496,6 +496,64 @@ function QueuePanel({ status, busy, error, onAction, title, description, allLabe
   )
 }
 
+const operationLabels: Record<string, string> = {
+  article_generation: 'Artículos',
+  excerpt_generation: 'Extractos',
+  food_type_classification: 'Tipos de comida',
+}
+
+function formatTokens(value: number) {
+  return new Intl.NumberFormat('es-ES').format(value)
+}
+
+function UsagePanel({ usage }: { usage: UsageSummary | null }) {
+  if (!usage) return null
+  return (
+    <section className="bg-white rounded-xl shadow-sm border border-purple-100 p-4 space-y-3">
+      <div>
+        <h2 className="font-semibold text-gray-900 text-sm">Uso de OpenAI</h2>
+        <p className="text-xs text-gray-500">Registrado por MyDirectoryTool · últimos {usage.days} días</p>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-lg bg-purple-50 p-3 text-center">
+          <div className="font-bold text-purple-900">{usage.requests}</div>
+          <div className="text-[11px] text-gray-500">Peticiones</div>
+        </div>
+        <div className="rounded-lg bg-blue-50 p-3 text-center">
+          <div className="font-bold text-blue-900">{formatTokens(usage.prompt_tokens)}</div>
+          <div className="text-[11px] text-gray-500">Entrada</div>
+        </div>
+        <div className="rounded-lg bg-green-50 p-3 text-center">
+          <div className="font-bold text-green-900">{formatTokens(usage.completion_tokens)}</div>
+          <div className="text-[11px] text-gray-500">Salida</div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+        <span className="text-xs font-medium text-gray-600">Total</span>
+        <strong className="text-sm text-gray-900">{formatTokens(usage.total_tokens)} tokens</strong>
+      </div>
+      {usage.breakdown.length > 0 && (
+        <details className="text-xs">
+          <summary className="cursor-pointer text-purple-800">Ver consumo por operación</summary>
+          <div className="mt-2 divide-y divide-gray-100">
+            {usage.breakdown.map(item => (
+              <div key={`${item.operation}-${item.model}`} className="py-2 flex justify-between gap-3">
+                <span className="text-gray-600">
+                  {operationLabels[item.operation] || item.operation} · {item.model} · {item.requests}
+                </span>
+                <strong className="whitespace-nowrap">{formatTokens(item.total_tokens)}</strong>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+      {usage.requests === 0 && (
+        <p className="text-xs text-gray-500">El contador comienza con este despliegue.</p>
+      )}
+    </section>
+  )
+}
+
 function Dashboard({ username, onLogout }: { username: string; onLogout: () => void }) {
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
@@ -512,6 +570,7 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
   const [repairQueueStatus, setRepairQueueStatus] = useState<QueueStatus | null>(null)
   const [repairQueueBusy, setRepairQueueBusy] = useState(false)
   const [repairQueueError, setRepairQueueError] = useState('')
+  const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null)
 
   const loadPlaces = useCallback(async () => {
     try {
@@ -541,16 +600,26 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
     }
   }, [])
 
+  const loadUsage = useCallback(async () => {
+    try {
+      setUsageSummary(await api.usageSummary(30))
+    } catch {
+      // La métrica no debe bloquear el resto del panel.
+    }
+  }, [])
+
   useEffect(() => {
     loadQueue()
     loadRepairQueue()
+    loadUsage()
     const timer = window.setInterval(() => {
       loadQueue()
       loadRepairQueue()
       loadPlaces()
+      loadUsage()
     }, 10000)
     return () => window.clearInterval(timer)
-  }, [loadQueue, loadRepairQueue, loadPlaces])
+  }, [loadQueue, loadRepairQueue, loadPlaces, loadUsage])
 
   const queueAction = async (action: 'test' | 'all' | 'pause' | 'resume' | 'retry') => {
     setQueueBusy(true)
@@ -754,6 +823,8 @@ function Dashboard({ username, onLogout }: { username: string; onLogout: () => v
           description="Una ficha incompleta cada 5 minutos · máximo 3 intentos"
           allLabel="Reparar todas las fichas incompletas"
         />
+
+        <UsagePanel usage={usageSummary} />
 
         {/* Places list */}
         <section>

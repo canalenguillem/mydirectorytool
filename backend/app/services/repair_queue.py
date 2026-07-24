@@ -257,7 +257,7 @@ def _repair_place(place_id: str) -> None:
 
     data = get_article_data(place_id)
     if "food_type" in flags and data and data.get("content"):
-        food_type = detectar_tipo_comida(data["content"])
+        food_type = detectar_tipo_comida(data["content"], place_id)
         if food_type:
             set_place_food_type(place_id, food_type)
 

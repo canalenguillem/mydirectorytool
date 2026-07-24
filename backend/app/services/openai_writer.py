@@ -3,6 +3,7 @@ import re
 
 from openai import OpenAI
 from decouple import config
+from app.services.openai_usage import record_openai_usage
 
 client = OpenAI(api_key=config("OPENAI_API_KEY"))
 
@@ -110,12 +111,13 @@ No uses listas numeradas ni etiquetas HTML. Todo debe estar en formato Markdown 
         messages=[{"role": "user", "content": prompt}],
         temperature=0.9,
     )
+    record_openai_usage(response, "article_generation", info.get("place_id"))
     return aplicar_titulo(response.choices[0].message.content, title)
 
 
 
 
-def generar_excerpt(texto: str) -> str:
+def generar_excerpt(texto: str, place_id: str | None = None) -> str:
     prompt = f"""
 Resume el siguiente texto en 1 o 2 frases claras, atractivas y naturales para ser usadas como extracto en un blog gastronómico:
 
@@ -128,4 +130,5 @@ Resume el siguiente texto en 1 o 2 frases claras, atractivas y naturales para se
         messages=[{"role": "user", "content": prompt}],
         temperature=0.5,
     )
+    record_openai_usage(response, "excerpt_generation", place_id)
     return response.choices[0].message.content.strip()

@@ -71,3 +71,22 @@ export interface QueueStatus {
   added?: number
   retried?: number
 }
+
+export interface UsageBreakdown {
+  operation: string
+  model: string
+  requests: number
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+}
+
+export interface UsageSummary {
+  days: number
+  requests: number
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  cached_tokens: number
+  breakdown: UsageBreakdown[]
+}

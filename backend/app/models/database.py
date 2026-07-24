@@ -214,6 +214,29 @@ def init_db():
     """)
 
     c.execute("""
+    CREATE TABLE IF NOT EXISTS openai_usage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at INTEGER NOT NULL,
+        operation TEXT NOT NULL,
+        model TEXT NOT NULL,
+        place_id TEXT,
+        prompt_tokens INTEGER NOT NULL DEFAULT 0,
+        completion_tokens INTEGER NOT NULL DEFAULT 0,
+        total_tokens INTEGER NOT NULL DEFAULT 0,
+        cached_tokens INTEGER NOT NULL DEFAULT 0,
+        response_id TEXT
+    )
+    """)
+    c.execute("""
+    CREATE INDEX IF NOT EXISTS idx_openai_usage_created_at
+    ON openai_usage(created_at)
+    """)
+    c.execute("""
+    CREATE INDEX IF NOT EXISTS idx_openai_usage_place_id
+    ON openai_usage(place_id)
+    """)
+
+    c.execute("""
         INSERT OR IGNORE INTO repair_queue_control
             (id, active, interval_seconds, next_run_at, updated_at)
         VALUES (1, 0, 300, NULL, strftime('%s', 'now'))

@@ -52,6 +52,9 @@ export const api = {
   retryFailedRepairQueue: () =>
     req<import('./types').QueueStatus>('/repair-queue/retry-failed', { method: 'POST' }),
 
+  usageSummary: (days = 30) =>
+    req<import('./types').UsageSummary>(`/usage/summary?days=${days}`),
+
   search: (query: string) =>
     req<{ resultados: import('./types').SearchResult[] }>(`/places/search?query=${encodeURIComponent(query)}`),
 

@@ -510,3 +510,10 @@ del proyecto, no mediante código duplicado.
 - `docs/postgresql-migration-plan.md`
 - `docs/roadmap.md`
 - `docs/inventories/`
+# Actualización: registro de tokens de OpenAI
+
+Desde el 24 de julio de 2026, las llamadas de generación de artículos,
+extractos y clasificación gastronómica registran sus tokens en SQLite. El
+panel ofrece un resumen de los últimos 30 días y un desglose por operación y
+modelo. El registro comienza en el momento del despliegue y está preparado
+para la futura migración a PostgreSQL.

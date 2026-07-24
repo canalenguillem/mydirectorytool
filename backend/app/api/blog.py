@@ -56,10 +56,10 @@ def publicar_article(place_id: str):
 
     categoria_id = get_or_create_category(data.get("postal_code"))
     data["categoria_id"] = categoria_id
-    data["tipo_de_comida"] = detectar_tipo_comida(data["content"])
+    data["tipo_de_comida"] = detectar_tipo_comida(data["content"], place_id)
     set_place_food_type(place_id, data["tipo_de_comida"])
     print(f'tipo de comida {data["tipo_de_comida"]} ')
-    data["excerpt"] = generar_excerpt(data["content"])
+    data["excerpt"] = generar_excerpt(data["content"], place_id)
 
 
     post_id = publicar_article_restaurante(data)
@@ -245,9 +245,9 @@ def full_publish(place_id: str):
     # función publicar_article_restaurante es la única responsable de subir la
     # imagen destacada y la galería.
     data["categoria_id"] = get_or_create_category(data.get("postal_code"))
-    data["tipo_de_comida"] = detectar_tipo_comida(data["content"])
+    data["tipo_de_comida"] = detectar_tipo_comida(data["content"], place_id)
     set_place_food_type(place_id, data["tipo_de_comida"])
-    data["excerpt"] = generar_excerpt(data["content"])
+    data["excerpt"] = generar_excerpt(data["content"], place_id)
 
     post_id = publicar_article_restaurante(data)
     if not post_id:
