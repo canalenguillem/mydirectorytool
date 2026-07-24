@@ -517,3 +517,14 @@ extractos y clasificación gastronómica registran sus tokens en SQLite. El
 panel ofrece un resumen de los últimos 30 días y un desglose por operación y
 modelo. El registro comienza en el momento del despliegue y está preparado
 para la futura migración a PostgreSQL.
+
+# Actualización: modelos de OpenAI subidos de gpt-4o a gpt-5.x
+
+El 24 de julio de 2026 se cambiaron los modelos de OpenAI usados en
+generación de contenido, porque `gpt-4o` y `gpt-4o-mini` ya no aparecen en el
+listado oficial de precios de OpenAI (aunque seguían respondiendo en el
+momento del cambio). `article_generation` pasa de `gpt-4o` a `gpt-5.4`.
+`excerpt_generation` y `food_type_classification` pasan de `gpt-4o-mini` a
+`gpt-5.4-nano`. Detalle completo, verificación realizada y pendientes de
+calidad por revisar en
+`docs/inventories/2026-07-24-openai-model-upgrade.md`.

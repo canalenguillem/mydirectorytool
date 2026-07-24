@@ -107,7 +107,7 @@ No inventes otro título, no lo reformules y no envuelvas el artículo en bloque
 No uses listas numeradas ni etiquetas HTML. Todo debe estar en formato Markdown limpio. Evita repetir frases entre artículos.
 """
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5.4",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.9,
     )
@@ -126,7 +126,7 @@ Resume el siguiente texto en 1 o 2 frases claras, atractivas y naturales para se
 \"\"\"
 """
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-5.4-nano",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.5,
     )
