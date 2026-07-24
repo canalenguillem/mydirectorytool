@@ -96,9 +96,9 @@ def fetch_and_save_reviews(place_id: str):
 
     reviews = get_reviews(place_id)
     if not reviews:
-        return {"message": "No s'han trobat ressenyes."}
+        return {"message": "No se han encontrado reseñas."}
     save_reviews_for_place(place_id, reviews)
-    return {"message": f"S'han guardat {len(reviews)} ressenyes.", "reviews": reviews}
+    return {"message": f"Se han guardado {len(reviews)} reseñas.", "reviews": reviews}
 
 
 @router.get("/reviews/concat")
@@ -186,7 +186,7 @@ def descargar_imagenes(place_id: str):
     conn.close()
 
     return {
-        "message": f"{nuevas} imatges noves registrades",
+        "message": f"{nuevas} imágenes nuevas registradas",
         "imagenes": rutas
     }
 
@@ -239,7 +239,43 @@ def set_featured_random(place_id: str):
     # Guardar amb la funció del servei
     set_featured_image(place_id, selected_image)
 
-    return {"message": f"Imatge destacada assignada: {selected_image}"}
+    return {"message": f"Imagen destacada asignada: {selected_image}"}
+
+
+@router.post("/places/sync-images")
+def sync_images_with_wordpress(place_id: str):
+    from fastapi import HTTPException
+    from app.models.database import list_all_places
+    from app.services.wordpress import sync_place_images
+
+    place = next(
+        (item for item in list_all_places() if item["place_id"] == place_id),
+        None,
+    )
+    if not place:
+        raise HTTPException(status_code=404, detail="El negocio no está guardado")
+    if not place.get("publicado_en_wp") or not place.get("wp_post_id"):
+        return {
+            "message": "Imágenes preparadas para la futura publicación",
+            "synced": False,
+        }
+
+    try:
+        result = sync_place_images(int(place["wp_post_id"]), place_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"No se pudieron sincronizar las imágenes con WordPress: {exc}",
+        ) from exc
+
+    return {
+        "message": (
+            f"Galería sincronizada: {result['gallery']} imágenes "
+            f"({result['uploaded']} subidas, {result['reused']} reutilizadas)"
+        ),
+        "synced": True,
+        **result,
+    }
 
 
 @router.delete("/places/delete")
@@ -247,4 +283,3 @@ def delete_place_complet(place_id: str):
     from app.services.place_deletion import delete_place_completely
 
     return delete_place_completely(place_id)
-

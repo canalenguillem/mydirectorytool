@@ -84,6 +84,9 @@ export const api = {
   setFeaturedRandom: (place_id: string) =>
     req<{ message: string }>(`/places/places/set-featured-random?place_id=${place_id}`, { method: 'POST' }),
 
+  syncImages: (place_id: string) =>
+    req<{ message: string; synced: boolean }>(`/places/places/sync-images?place_id=${encodeURIComponent(place_id)}`, { method: 'POST' }),
+
   publish: (place_id: string) =>
     req<{ message: string; post_id: number }>(`/blog/blog/full-publish?place_id=${place_id}`, { method: 'POST' }),
 

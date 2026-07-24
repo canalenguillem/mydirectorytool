@@ -97,6 +97,102 @@ def ensure_featured_image(post_id: int, image_path: str) -> bool:
     print(f"[OK] Imatge destacada {media_id} assignada al post {post_id}")
     return True
 
+
+def sync_place_images(post_id: int, place_id: str) -> dict:
+    """Synchronize existing local images with an already published post."""
+    from app.models.database import get_all_images_for_place
+
+    image_paths = [
+        image_path
+        for image_path in get_all_images_for_place(place_id)
+        if image_path and os.path.exists(image_path)
+    ]
+    if not image_paths:
+        raise RuntimeError("No hay imágenes locales disponibles")
+
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        row = conn.execute(
+            "SELECT image_path FROM place_featured_image WHERE place_id = ?",
+            (place_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    featured_path = row[0] if row and row[0] and os.path.exists(row[0]) else image_paths[0]
+    if not ensure_featured_image(post_id, featured_path):
+        raise RuntimeError("WordPress no pudo asignar la imagen destacada")
+
+    existing_response = requests.get(
+        f"{WP_URL}/wp-json/wp/v2/media",
+        auth=AUTH,
+        params={
+            "parent": post_id,
+            "per_page": 100,
+            "_fields": "id,source_url",
+        },
+        timeout=REQUEST_TIMEOUT,
+    )
+    existing_response.raise_for_status()
+    existing_by_name = {
+        os.path.basename(item.get("source_url", "")): item
+        for item in existing_response.json()
+        if item.get("source_url")
+    }
+
+    gallery_urls = []
+    uploaded = 0
+    reused = 0
+    for image_path in image_paths:
+        if image_path == featured_path:
+            continue
+        prepared_path = _prepare_media_path(image_path)
+        filename = os.path.basename(prepared_path)
+        media = existing_by_name.get(filename)
+
+        if media:
+            media_id = media["id"]
+            media_url = media["source_url"]
+            reused += 1
+        else:
+            media_id = _upload_media(prepared_path)
+            if not media_id:
+                raise RuntimeError(f"No se pudo subir {filename}")
+            media_response = requests.get(
+                f"{WP_URL}/wp-json/wp/v2/media/{media_id}",
+                auth=AUTH,
+                params={"_fields": "id,source_url"},
+                timeout=REQUEST_TIMEOUT,
+            )
+            media_response.raise_for_status()
+            media_url = media_response.json().get("source_url", "")
+            uploaded += 1
+
+        assigned = requests.post(
+            f"{WP_URL}/wp-json/wp/v2/media/{media_id}",
+            auth=AUTH,
+            json={"post": post_id},
+            timeout=REQUEST_TIMEOUT,
+        )
+        assigned.raise_for_status()
+        if media_url:
+            gallery_urls.append(media_url)
+
+    gallery_response = requests.post(
+        f"{WP_URL}/wp-json/acf/v3/restaurante/{post_id}",
+        auth=AUTH,
+        json={"fields": {"place_gallery": ",".join(gallery_urls)}},
+        timeout=REQUEST_TIMEOUT,
+    )
+    gallery_response.raise_for_status()
+
+    return {
+        "available": len(image_paths),
+        "gallery": len(gallery_urls),
+        "uploaded": uploaded,
+        "reused": reused,
+    }
+
 def get_or_create_category(cpostal: str) -> int | None:
     r = requests.get(f"{WP_URL}/wp-json/wp/v2/categories?search={cpostal}", auth=AUTH)
     

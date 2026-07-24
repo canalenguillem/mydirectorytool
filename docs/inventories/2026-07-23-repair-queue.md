@@ -109,3 +109,27 @@ El panel detecta además 70 fichas sin copia local válida de sus imágenes. No
 equivale a 70 galerías públicas ausentes: WordPress solo presenta 23 sin
 galería. Deben tratarse como dos problemas distintos para evitar descargas
 innecesarias.
+
+### Sincronización de Sa Frontera
+
+Sa Frontera conservaba diez filas antiguas con rutas inexistentes y diez fotos
+nuevas válidas en `/data`, pero WordPress solo tenía una destacada y
+`place_gallery` estaba vacío.
+
+Se añadió sincronización para posts existentes:
+
+- valida archivos físicos;
+- asigna una destacada válida;
+- reutiliza adjuntos existentes;
+- sube únicamente los medios que falten;
+- asocia los adjuntos al post;
+- actualiza `place_gallery`.
+
+Resultado:
+
+- 10 imágenes locales disponibles;
+- 1 destacada;
+- 9 imágenes de galería subidas;
+- 5 parejas renderizadas dentro del artículo;
+- HTTP 200;
+- artículo conservado sin republicar.

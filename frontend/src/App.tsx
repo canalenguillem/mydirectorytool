@@ -103,7 +103,11 @@ function PlacePanel({ place, onRefresh }: { place: Place; onRefresh: () => void 
     try {
       const res = await api.downloadImages(place.place_id)
       await api.setFeaturedRandom(place.place_id)
-      setImagesStatus({ type: 'success', message: res.message })
+      const sync = await api.syncImages(place.place_id)
+      setImagesStatus({
+        type: 'success',
+        message: place.publicado_en_wp ? sync.message : res.message,
+      })
     } catch (e) {
       setImagesStatus({ type: 'error', message: String(e) })
     }

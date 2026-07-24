@@ -243,7 +243,7 @@ def _repair_place(place_id: str) -> None:
     from app.services.featured_image import set_featured_image
     from app.services.openai_writer import generar_articulo_blog
     from app.services.place_images import download_all_place_photos
-    from app.services.wordpress import guardar_campos_acf
+    from app.services.wordpress import guardar_campos_acf, sync_place_images
 
     place = next(p for p in list_all_places() if p["place_id"] == place_id)
     flags = set(place["incomplete_fields"])
@@ -309,6 +309,8 @@ def _repair_place(place_id: str) -> None:
         if result.get("error") or not result.get("post_id"):
             raise RuntimeError(result.get("error") or "WordPress no devolvió un ID")
     elif data.get("publicado_en_wp") and data.get("wp_post_id"):
+        if "images" in flags:
+            sync_place_images(int(data["wp_post_id"]), place_id)
         if not guardar_campos_acf(
             int(data["wp_post_id"]),
             acf_fields_from_data(data),

@@ -171,6 +171,8 @@ de webs y no se inventan datos ausentes.
 - Parejas de imágenes en la misma fila en pantallas grandes.
 - Una columna en móvil.
 - Reutilización de adjuntos y `srcset` cuando WordPress los ofrece.
+- Sincronización de imágenes con artículos ya publicados sin republicarlos.
+- Los botones de descarga y reseñas muestran sus resultados en castellano.
 
 ## 9. Publicación en WordPress
 
