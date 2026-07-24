@@ -2,6 +2,7 @@ import sqlite3
 import threading
 import time
 import traceback
+import os
 
 from app.models.database import DB_PATH
 
@@ -151,7 +152,7 @@ def get_queue_status() -> dict:
             SELECT q.place_id, p.name, q.attempts, q.last_error
             FROM repair_queue q
             LEFT JOIN place p ON p.place_id = q.place_id
-            WHERE q.last_error IS NOT NULL
+            WHERE NULLIF(TRIM(q.last_error), '') IS NOT NULL
             ORDER BY COALESCE(q.finished_at, q.started_at) DESC
             LIMIT 5
             """
@@ -260,27 +261,44 @@ def _repair_place(place_id: str) -> None:
         if food_type:
             set_place_food_type(place_id, food_type)
 
-    if "images" in flags:
-        image_paths = download_all_place_photos(place_id)
-        if not image_paths:
-            raise RuntimeError("No se encontraron imágenes para el restaurante")
-        with _connect() as conn:
-            for image_path in image_paths:
-                exists = conn.execute(
-                    """
-                    SELECT 1 FROM place_image
-                    WHERE place_id = ? AND image_path = ?
-                    """,
-                    (place_id, image_path),
-                ).fetchone()
-                if not exists:
-                    conn.execute(
-                        "INSERT INTO place_image (place_id, image_path) VALUES (?, ?)",
+    if flags.intersection({"images", "wordpress_link"}):
+        available_images = [
+            image_path
+            for image_path in get_all_images_for_place(place_id)
+            if image_path and os.path.exists(image_path)
+        ]
+        if not available_images:
+            image_paths = download_all_place_photos(place_id)
+            if not image_paths:
+                raise RuntimeError("No se encontraron imágenes para el restaurante")
+            with _connect() as conn:
+                for image_path in image_paths:
+                    exists = conn.execute(
+                        """
+                        SELECT 1 FROM place_image
+                        WHERE place_id = ? AND image_path = ?
+                        """,
                         (place_id, image_path),
-                    )
-        if not get_all_images_for_place(place_id):
+                    ).fetchone()
+                    if not exists:
+                        conn.execute(
+                            "INSERT INTO place_image (place_id, image_path) VALUES (?, ?)",
+                            (place_id, image_path),
+                        )
+            available_images = [
+                image_path
+                for image_path in get_all_images_for_place(place_id)
+                if image_path and os.path.exists(image_path)
+            ]
+        if not available_images:
             raise RuntimeError("Las imágenes no se pudieron registrar")
-        set_featured_image(place_id, get_all_images_for_place(place_id)[0])
+        with _connect() as conn:
+            featured = conn.execute(
+                "SELECT image_path FROM place_featured_image WHERE place_id = ?",
+                (place_id,),
+            ).fetchone()
+        if not featured or not featured["image_path"] or not os.path.exists(featured["image_path"]):
+            set_featured_image(place_id, available_images[0])
 
     data = get_article_data(place_id)
     if not data:

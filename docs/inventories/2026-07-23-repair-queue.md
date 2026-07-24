@@ -78,3 +78,34 @@ Repositorios:
 
 - tema, commit `2dd9d91`;
 - plugin, commit `3ee1cf7`.
+
+## Cierre del 24 de julio de 2026
+
+- Cola original: 92 trabajos.
+- Completados: 92.
+- Errores definitivos: 0.
+- Porrón se republicó como post 4202.
+- Kimbo Caffè se republicó como post 4213.
+- WordPress quedó con 315 restaurantes publicados.
+
+Los dos últimos fallos procedían de rutas de imágenes históricas registradas en
+SQLite cuyos archivos ya no existían dentro del volumen Docker. Se corrigió el
+detector para contar únicamente archivos físicos y la reparación valida siempre
+la destacada antes de republicar.
+
+Auditoría pública final:
+
+| Señal | Resultado |
+|---|---:|
+| Sin destacada | 0 |
+| Sin galería | 23 |
+| Sin contacto | 11 |
+| Sin ubicación completa | 4 |
+| Sin extracto | 0 |
+| Títulos de más de 70 caracteres | 80 |
+| Contenido de menos de 300 palabras | 0 |
+
+El panel detecta además 70 fichas sin copia local válida de sus imágenes. No
+equivale a 70 galerías públicas ausentes: WordPress solo presenta 23 sin
+galería. Deben tratarse como dos problemas distintos para evitar descargas
+innecesarias.

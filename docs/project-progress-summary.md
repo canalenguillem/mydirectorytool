@@ -369,6 +369,11 @@ La primera reparación validada fue `Ca'n Pintxo Restaurant`:
 
 Los contadores cambian mientras trabajan las colas.
 
+Actualización del 24 de julio de 2026: las dos colas iniciales terminaron. La
+publicación completó 244 trabajos sin errores y la reparación completó sus 92
+trabajos sin errores definitivos. WordPress quedó con 315 restaurantes
+publicados.
+
 ### Aplicación
 
 | Métrica | Valor |
@@ -501,4 +506,3 @@ del proyecto, no mediante código duplicado.
 - `docs/postgresql-migration-plan.md`
 - `docs/roadmap.md`
 - `docs/inventories/`
-

@@ -417,9 +417,19 @@ def list_all_places():
         "business_status", "tipo_de_comida", "image_count",
     ]
     places = [dict(zip(keys, row)) for row in c.fetchall()]
+    image_paths = {}
+    for place_id, image_path in c.execute(
+        "SELECT place_id, image_path FROM place_image"
+    ).fetchall():
+        image_paths.setdefault(place_id, []).append(image_path)
     conn.close()
 
     for place in places:
+        place["image_count"] = sum(
+            1
+            for image_path in image_paths.get(place["place_id"], [])
+            if image_path and os.path.exists(image_path)
+        )
         flags = []
         if not any(
             str(place.get(field) or "").strip()
