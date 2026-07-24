@@ -173,6 +173,8 @@ de webs y no se inventan datos ausentes.
 - Reutilización de adjuntos y `srcset` cuando WordPress los ofrece.
 - Sincronización de imágenes con artículos ya publicados sin republicarlos.
 - Los botones de descarga y reseñas muestran sus resultados en castellano.
+- Al borrar un adjunto desde la biblioteca de WordPress, el plugin elimina
+  automáticamente su URL de `place_gallery` para evitar imágenes rotas.
 
 ## 9. Publicación en WordPress
 
