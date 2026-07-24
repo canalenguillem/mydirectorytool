@@ -42,7 +42,7 @@ def download_all_place_photos(place_id: str) -> list[str]:
             f"https://maps.googleapis.com/maps/api/place/photo?"
             f"maxwidth=1600&photo_reference={ref}&key={config('GOOGLE_API_KEY')}"
         )
-        print(f"[INFO] Descargando imagen {idx}/{len(photo_refs)} para {place_id}")
+        print(f"[INFO] Descargando imagen {i + 1}/{len(photo_refs)} para {place_id}")
         r = requests.get(photo_url, stream=True)
         if r.status_code == 200:
             content_type = r.headers.get("Content-Type", "")
