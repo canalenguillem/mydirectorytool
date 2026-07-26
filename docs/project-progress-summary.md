@@ -543,3 +543,17 @@ artículos reales con `gpt-5.4`/`gpt-5.4-nano`: calidad y coste dentro de lo
 esperado, con una diferencia de clasificación de tipo de comida a revisar
 antes de aplicar cambios en bloque. Detalle completo en
 `docs/inventories/2026-07-24-openai-model-upgrade.md`.
+
+# Actualización: primer paso de la migración a PostgreSQL (modelos + Alembic)
+
+El 26 de julio de 2026 se dio el primer paso de
+`docs/postgresql-migration-plan.md` §6: modelos SQLAlchemy
+(`backend/app/models/orm.py`) y una migración base con Alembic
+(`backend/alembic/`), verificados contra una copia de `data/places.db` sin
+tocar el motor ni ningún caso de uso existente. La app sigue funcionando
+igual que antes (`init_db()` sin cambios, los 10 ficheros que usan `sqlite3`
+directamente sin tocar). La verificación destapó un índice único
+(`idx_place_id` sobre `place.place_id`) que existe en producción pero no
+estaba documentado en ningún sitio del repo ni del historial de git.
+Detalle completo en
+`docs/inventories/2026-07-26-sqlalchemy-alembic-baseline.md`.

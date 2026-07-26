@@ -338,9 +338,23 @@ Medir:
 
 ## 18. Estado y próxima acción
 
-Estado: **planificada, no iniciada**.
+Estado: **capa de datos en preparación** (26 de julio de 2026).
 
-La próxima acción no es instalar PostgreSQL. Primero se deben introducir
-migraciones formales y una capa de repositorios mientras la aplicación continúa
-funcionando con SQLite. La ejecución se programará al comenzar el núcleo
-multidirectorio y después de estabilizar la cola actual.
+Del orden definido en §6, los pasos 1 y 5 están hechos: existen modelos
+SQLAlchemy fieles al esquema real (`backend/app/models/orm.py`) y una
+migración base de Alembic verificada contra una copia de `data/places.db`
+(`backend/alembic/`). Detalle completo, incluida la verificación y un
+hallazgo de drift no documentado (`idx_place_id`), en
+`docs/inventories/2026-07-26-sqlalchemy-alembic-baseline.md`.
+
+La aplicación sigue funcionando exactamente igual: `init_db()` sigue siendo
+lo único que crea/evoluciona el esquema en producción, y los 10 ficheros que
+acceden a `sqlite3` directamente no se han tocado. La nueva capa es inerte
+hasta el siguiente paso.
+
+Próxima acción — sigue sin ser instalar PostgreSQL. Es el paso 2 de §6:
+mantener SQLite detrás de la nueva capa (empezar a introducir repositorios
+que usen `orm.py`), y después el paso 3: migrar cada caso de uso de
+`database.py` y los demás ficheros, con pruebas de equivalencia, antes de
+eliminar los accesos directos a `sqlite3`. Esa ejecución se sigue
+programando al comenzar el núcleo multidirectorio.
