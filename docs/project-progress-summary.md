@@ -528,3 +528,18 @@ momento del cambio). `article_generation` pasa de `gpt-4o` a `gpt-5.4`.
 `gpt-5.4-nano`. Detalle completo, verificación realizada y pendientes de
 calidad por revisar en
 `docs/inventories/2026-07-24-openai-model-upgrade.md`.
+
+# Actualización: colas drenadas, backend reconstruido y verificación de gpt-5.4
+
+El 26 de julio de 2026, con las colas de publicación (274) y reparación (127)
+completadas al 100% y sin pendientes, se repitió la auditoría de calidad de
+WordPress (346 publicados, huérfano ID 44 sigue siendo el único conocido,
+mejoras claras en galería/contacto/ubicación desde la auditoría del 23 de
+julio — detalle en `docs/inventories/2026-07-26-content-quality-audit.md`) y
+se reconstruyó el backend (`docker compose up -d --build backend`) porque el
+contenedor llevaba desde el 25 de julio corriendo la imagen vieja pese al
+commit del cambio de modelos. Con la imagen ya actualizada se probaron 3
+artículos reales con `gpt-5.4`/`gpt-5.4-nano`: calidad y coste dentro de lo
+esperado, con una diferencia de clasificación de tipo de comida a revisar
+antes de aplicar cambios en bloque. Detalle completo en
+`docs/inventories/2026-07-24-openai-model-upgrade.md`.
