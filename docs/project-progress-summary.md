@@ -557,3 +557,15 @@ directamente sin tocar). La verificación destapó un índice único
 estaba documentado en ningún sitio del repo ni del historial de git.
 Detalle completo en
 `docs/inventories/2026-07-26-sqlalchemy-alembic-baseline.md`.
+
+# Actualización: resuelto el post huérfano histórico (ID 44, "Porrón")
+
+El 26 de julio de 2026 se investigó y resolvió el post huérfano que §18
+menciona desde hace tiempo. No era una ficha única en riesgo: era contenido
+duplicado real — el mismo negocio ("Porrón", Manacor) ya estaba publicado
+correctamente bajo otro post (`wp_post_id=4202`, gestionado con normalidad
+por la app) desde hace tiempo. El post 44 (abril de 2025) quedó huérfano
+tras perderse la fila local original. Se borró de WordPress con la misma
+función que usa la app para borrados normales. Reconciliación final: 348
+posts en WordPress = 348 `wp_post_id` en SQLite, sin huecos. Detalle en
+`docs/inventories/2026-07-26-content-quality-audit.md`.

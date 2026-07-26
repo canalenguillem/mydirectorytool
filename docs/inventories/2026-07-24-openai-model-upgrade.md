@@ -70,16 +70,24 @@ en paralelo).
   salida), aproximadamente la mitad del coste por token de `gpt-4o`.
 - **Extractos (`gpt-5.4-nano`):** 3/3 en 1-2 frases naturales, sin desviarse
   del formato. Coste: ~0,0007 $/extracto (prácticamente gratis).
-- **Clasificación (`gpt-5.4-nano`):** 2/3 coincidieron exactamente con la
-  categoría ya guardada (`italiana`, `china`). La tercera difirió: Mama Muú
-  Steakhouse tenía `carnes` guardado y `gpt-5.4-nano` devolvió `mediterránea`.
-  No es necesariamente un error — `carnes` no está entre los ejemplos que da
-  el propio prompt (`italiana`, `japonesa`, `mallorquina`, `mediterránea`,
-  `hamburguesas`) — pero es una diferencia de comportamiento real frente al
-  modelo anterior. **No se ha aplicado ningún cambio de clasificación en
-  producción** a partir de esta prueba; si se decide reclasificar en bloque,
-  revisar antes una muestra mayor y con criterio humano, porque el tipo de
-  comida alimenta taxonomías públicas de WordPress.
+- **Clasificación (`gpt-5.4-nano`) — muestra ampliada a 11 fichas (26 de
+  julio):** 8/11 coincidieron exactamente con la categoría ya guardada. Las
+  3 que difirieron siguen todas el mismo patrón: una categoría específica se
+  sustituye por una más genérica —
+  `carnes` → `mediterránea` (Mama Muú Steakhouse),
+  `gallega` → `española` (Taberna da Galera),
+  `mallorquina` → `mediterránea` (Como en Casa).
+  **`mediterránea` actúa como una especie de categoría por defecto** de
+  `gpt-5.4-nano` cuando la reseña no señala con fuerza una cocina regional
+  concreta — incluso desplazando `mallorquina`, que es uno de los propios
+  ejemplos del prompt. No es necesariamente incorrecto (son subconjuntos
+  razonables), pero es una diferencia de comportamiento sistemática frente
+  al modelo anterior, no ruido aleatorio. **No se ha aplicado ningún cambio
+  de clasificación en producción** a partir de estas pruebas. Si en algún
+  momento se decide reclasificar en bloque, conviene o bien revisar caso a
+  caso, o bien afinar el prompt para que priorice la cocina regional
+  específica cuando la reseña la mencione explícitamente, antes de caer en
+  `mediterránea` por defecto.
 - Las 9 llamadas de esta prueba quedaron registradas en `openai_usage` con
   `model = gpt-5.4-2026-03-05` / `gpt-5.4-nano-2026-03-17` (versión fechada
   que devuelve la API), confirmando que el tracking sigue funcionando sin
