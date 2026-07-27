@@ -268,17 +268,25 @@ def _finish(place_id: str, error: str | None = None) -> None:
         )
 
 
+def _process_once() -> str | None:
+    """Reclama y procesa un elemento de la cola. Devuelve el place_id
+    procesado, o None si no había nada que hacer. Extraído de _worker()
+    para poder testear el manejo de errores sin el bucle infinito."""
+    place_id = _claim_next()
+    if place_id:
+        try:
+            _run_pipeline(place_id)
+        except Exception as exc:
+            traceback.print_exc()
+            _finish(place_id, str(exc)[:2000])
+        else:
+            _finish(place_id)
+    return place_id
+
+
 def _worker() -> None:
     while True:
-        place_id = _claim_next()
-        if place_id:
-            try:
-                _run_pipeline(place_id)
-            except Exception as exc:
-                traceback.print_exc()
-                _finish(place_id, str(exc)[:2000])
-            else:
-                _finish(place_id)
+        _process_once()
         time.sleep(2)
 
 

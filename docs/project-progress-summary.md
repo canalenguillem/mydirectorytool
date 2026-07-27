@@ -598,3 +598,17 @@ que se aplica siempre al resultado. Se corrigieron también los 11 extractos
 ya publicados (cambio de formato puro vía la API de WordPress, sin volver a
 generar texto). Verificado: 0/349 con `**` en el excerpt tras el fix.
 Detalle en `docs/inventories/2026-07-26-excerpt-markdown-fix.md`.
+
+# Actualización: primeras pruebas automatizadas (colas de publicación y reparación)
+
+El 26 de julio de 2026 se añadió la primera suite de tests del proyecto
+(§22, pendiente desde hacía tiempo): 43 tests cubriendo la máquina de
+estados de las dos colas críticas (encolar, pausar, reanudar, reintentar,
+reclamar, cerrar con éxito/fallo), con SQLite temporal aislado por test —
+nunca toca `data/places.db` (verificado por hash y por un caso que fuerza
+un `DATA_DIR` inválido para confirmar que falla alto en vez de tocar datos
+reales en silencio). Se extrajo `_process_once()` de `_worker()` en ambos
+ficheros (refactor sin cambio de comportamiento, ya desplegado) para poder
+testear el manejo de errores del pipeline sin mockear OpenAI, WordPress ni
+Google Places. 43/43 en verde. Detalle en
+`docs/inventories/2026-07-26-queue-tests.md`.
