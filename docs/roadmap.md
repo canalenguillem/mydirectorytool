@@ -1,27 +1,62 @@
 # Hoja de ruta
 
+Última actualización: 26 de julio de 2026.
+
 ## Fase 0: estabilizar el directorio gastronómico
 
-Estado: en curso.
+Estado: casi completa. Quedan dos puntos sin confirmar, el resto ya está
+verificado en producción.
 
-- Completar y observar la cola actual.
-- Validar publicaciones en varias ciudades.
-- Revisar errores, duplicados, títulos, imágenes y ACF.
-- Añadir ciudades en lotes moderados.
-- Mantener copias de seguridad.
-- Confirmar crecimiento de indexación e impresiones.
+- Completar y observar la cola actual — hecho. Publicación (274) y
+  reparación (127) drenadas, 0 pendientes, 0 errores definitivos.
+- Validar publicaciones en varias ciudades — hecho. El catálogo cubre
+  Mallorca, Madrid, Valladolid, A Coruña, Bérgamo (Italia) y más.
+- Revisar errores, duplicados, títulos, imágenes y ACF — hecho.
+  Auditorías repetidas el 23 y el 26 de julio
+  (`docs/inventories/2026-07-26-content-quality-audit.md`), post huérfano
+  resuelto, extractos con Markdown corregidos, títulos y retórica de
+  artículos nuevos con más variedad.
+- Añadir ciudades en lotes moderados — en marcha de forma continua vía la
+  cola de publicación; no es un hito puntual que se pueda cerrar.
+- Mantener copias de seguridad — **sin confirmar**. La última copia
+  verificada de `places.db` en `docs/project-progress-summary.md` es del
+  23 de julio; no se ha tomado una nueva pese a los cambios de esta
+  sesión (borrado de un post en WordPress, ediciones de excerpt). Pendiente.
+- Confirmar crecimiento de indexación e impresiones — **sin confirmar**.
+  Requiere acceso a Search Console, que no está disponible desde aquí;
+  solo lo puede revisar el operador.
 
 No se debe hacer una gran refactorización mientras una publicación masiva esté activa.
 
 ## Fase 1: calidad y robustez
 
-- Homogeneizar respuestas y códigos HTTP.
-- Añadir timeouts y reintentos específicos a todas las integraciones.
-- Evitar duplicados de lugares, reseñas e imágenes mediante restricciones.
-- Introducir migraciones de base de datos.
-- Añadir pruebas unitarias y de integración con mocks.
-- Añadir logs estructurados y métricas de costes.
-- Crear proceso seguro de enriquecimiento histórico por lotes.
+Estado: en marcha, 3 de 7 puntos completados el 26 de julio de 2026.
+
+- Homogeneizar respuestas y códigos HTTP — pendiente.
+- Añadir timeouts y reintentos específicos a todas las integraciones —
+  pendiente. Existe un timeout genérico en `wordpress.py`
+  (`REQUEST_TIMEOUT = 60`), pero no es sistemático ni cubre reintentos.
+- Evitar duplicados de lugares, reseñas e imágenes mediante restricciones
+  — pendiente. Se descubrió el 26 de julio que `place.place_id` ya tiene
+  un índice único en producción (`idx_place_id`), pero no está declarado
+  en `init_db()` ni documentado en ningún sitio hasta ahora
+  (`docs/inventories/2026-07-26-sqlalchemy-alembic-baseline.md`) — no hay
+  restricciones equivalentes para `review` ni `place_image`.
+- Introducir migraciones de base de datos — **hecho**. Modelos
+  SQLAlchemy fieles al esquema real + migración base de Alembic,
+  verificados contra una copia de `places.db`
+  (`docs/inventories/2026-07-26-sqlalchemy-alembic-baseline.md`). Es
+  también el primer punto de la Fase 3 (ver abajo).
+- Añadir pruebas unitarias y de integración con mocks — **parcialmente
+  hecho**. 43 tests unitarios cubriendo la máquina de estados de las dos
+  colas (`docs/inventories/2026-07-26-queue-tests.md`). Sin tests de
+  integración HTTP ni mocks de OpenAI/WordPress/Google todavía.
+- Añadir logs estructurados y métricas de costes — **parcialmente
+  hecho**. Métricas de coste de OpenAI implementadas
+  (`docs/inventories/2026-07-24-openai-token-usage.md`). Logs
+  estructurados pendientes: el código sigue usando `print()` suelto.
+- Crear proceso seguro de enriquecimiento histórico por lotes — hecho
+  (la cola de reparación cubre este caso).
 
 Resultado: un pipeline fiable que puede operar durante días sin supervisión constante.
 
@@ -43,7 +78,14 @@ Resultado: las fichas dejan de estar aisladas y forman un directorio navegable.
 
 ## Fase 3: núcleo multidirectorio
 
-- Introducir SQLAlchemy y Alembic manteniendo primero SQLite.
+Estado: primer punto iniciado el 26 de julio de 2026 (ver Fase 1 arriba).
+
+- Introducir SQLAlchemy y Alembic manteniendo primero SQLite — **iniciado**.
+  Modelos y migración base ya existen y están verificados, pero la app
+  sigue usando `sqlite3` crudo en los 10 ficheros de siempre; falta la
+  capa de repositorios y migrar cada caso de uso con pruebas de
+  equivalencia antes de poder decir que este punto está terminado
+  (`docs/postgresql-migration-plan.md` §18).
 - Ensayar y ejecutar la migración a PostgreSQL mediante el runbook documentado.
 - Crear entidad `directory`.
 - Registrar Dónde comer bien como primer proyecto.
@@ -94,13 +136,22 @@ No se debe mezclar automáticamente publicación editorial con campañas de cont
 
 ## Próximas decisiones
 
-Cuando termine la cola actual, el orden recomendado es:
+Actualizado el 26 de julio de 2026 — la cola ya terminó (Fase 0 casi
+completa, ver arriba). El orden recomendado ahora es cerrar lo que queda
+de Fase 1 antes de seguir avanzando la Fase 3, porque son las piezas que
+reducen riesgo en vez de añadir alcance nuevo:
 
-1. Copia de seguridad y revisión de errores.
-2. Enriquecimiento geográfico histórico en lotes pequeños.
-3. Páginas de localidad para las ciudades con más fichas.
-4. Restricciones de integridad y migraciones.
-5. Introducción de `directory` sin cambiar todavía el comportamiento visible.
+1. Tomar una copia de seguridad nueva de `places.db` (la última verificada
+   es del 23 de julio, y desde entonces ha habido cambios reales en
+   producción).
+2. Restricciones de integridad formales (`place_id` único ya existe sin
+   documentar; faltan las de `review` e imágenes) y logs estructurados —
+   los dos puntos de Fase 1 sin ningún avance todavía.
+3. Capa de repositorios sobre los modelos SQLAlchemy ya creados, migrando
+   casos de uso de `database.py` uno a uno con pruebas de equivalencia
+   (Fase 3, siguiente paso natural tras la migración base).
+4. Solo entonces, introducción de `directory` sin cambiar el
+   comportamiento visible.
 
 ## Definición de producto a largo plazo
 
