@@ -585,3 +585,16 @@ prohibidas en el prompt. Verificado con 5 artículos reales: 0/5 repitió
 las fórmulas señaladas, títulos y ángulos variados, sin pérdida de
 longitud ni calidad. Detalle en
 `docs/inventories/2026-07-26-article-title-and-rhetoric-variety.md`.
+
+# Actualización: extractos con asteriscos de Markdown visibles (corregido)
+
+El 26 de julio de 2026 se detectó que 11 de 349 fichas publicadas mostraban
+literalmente `**texto**` en el extracto de la web, porque `generar_excerpt()`
+recibía el artículo en Markdown crudo y el modelo copiaba ese marcado en el
+resumen — a diferencia del contenido del post, el excerpt nunca se convertía
+de Markdown a HTML antes de enviarse a WordPress. Se reforzó el prompt para
+pedir texto plano y se añadió una limpieza defensiva (`_strip_markdown()`)
+que se aplica siempre al resultado. Se corrigieron también los 11 extractos
+ya publicados (cambio de formato puro vía la API de WordPress, sin volver a
+generar texto). Verificado: 0/349 con `**` en el excerpt tras el fix.
+Detalle en `docs/inventories/2026-07-26-excerpt-markdown-fix.md`.

@@ -253,9 +253,26 @@ No uses listas numeradas ni etiquetas HTML. Todo debe estar en formato Markdown 
 
 
 
+def _strip_markdown(texto: str) -> str:
+    """Quita marcado Markdown de un texto corto.
+
+    WordPress no renderiza el excerpt como Markdown (solo el contenido del
+    post pasa por markdown2 en wordpress.py), así que cualquier **negrita**
+    que se cuele en el extracto aparece literal en el sitio publicado.
+    """
+    texto = re.sub(r"\*\*(.+?)\*\*", r"\1", texto)
+    texto = re.sub(r"__(.+?)__", r"\1", texto)
+    texto = re.sub(r"(?<!\w)\*(?!\s)(.+?)(?<!\s)\*(?!\w)", r"\1", texto)
+    texto = re.sub(r"`([^`]+)`", r"\1", texto)
+    texto = re.sub(r"^#+\s*", "", texto, flags=re.MULTILINE)
+    return texto.strip()
+
+
 def generar_excerpt(texto: str, place_id: str | None = None) -> str:
     prompt = f"""
-Resume el siguiente texto en 1 o 2 frases claras, atractivas y naturales para ser usadas como extracto en un blog gastronómico:
+Resume el siguiente texto en 1 o 2 frases claras, atractivas y naturales para ser usadas como extracto en un blog gastronómico.
+
+⚠️ Responde en texto plano, sin ningún formato Markdown: nada de **negrita**, *cursiva*, `código` ni almohadillas de título. Solo la frase, sin marcado de ningún tipo.
 
 \"\"\"
 {texto}
@@ -267,4 +284,4 @@ Resume el siguiente texto en 1 o 2 frases claras, atractivas y naturales para se
         temperature=0.5,
     )
     record_openai_usage(response, "excerpt_generation", place_id)
-    return response.choices[0].message.content.strip()
+    return _strip_markdown(response.choices[0].message.content.strip())
