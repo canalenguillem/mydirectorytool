@@ -569,3 +569,19 @@ tras perderse la fila local original. Se borró de WordPress con la misma
 función que usa la app para borrados normales. Reconciliación final: 348
 posts en WordPress = 348 `wp_post_id` en SQLite, sin huecos. Detalle en
 `docs/inventories/2026-07-26-content-quality-audit.md`.
+
+# Actualización: más variedad en títulos y retórica de artículos nuevos
+
+El 26 de julio de 2026, tras leer los primeros artículos reales generados
+con `gpt-5.4`, se detectaron dos repeticiones sistemáticas:
+`generar_titulo_unico()` solo elegía entre 20 plantillas de título fijas
+(cada una se repetía ~17 veces en 348 fichas), y el modelo convergía en la
+misma retórica en todos los artículos (apertura idéntica, la antítesis "no
+es X, sino Y", y el cierre "Porque..." en el 100% de la muestra). Se
+ampliaron las plantillas de título a 59 (repetición media ~6) y se
+añadieron 6 "ángulos" retóricos de apertura/cierre elegidos de forma
+determinista por `place_id`, junto con una lista explícita de fórmulas
+prohibidas en el prompt. Verificado con 5 artículos reales: 0/5 repitió
+las fórmulas señaladas, títulos y ángulos variados, sin pérdida de
+longitud ni calidad. Detalle en
+`docs/inventories/2026-07-26-article-title-and-rhetoric-variety.md`.
