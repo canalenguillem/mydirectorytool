@@ -4,7 +4,7 @@
 
 ## Fase 0: estabilizar el directorio gastronómico
 
-Estado: casi completa. Quedan dos puntos sin confirmar, el resto ya está
+Estado: casi completa. Queda un punto sin confirmar, el resto ya está
 verificado en producción.
 
 - Completar y observar la cola actual — hecho. Publicación (274) y
@@ -18,10 +18,9 @@ verificado en producción.
   artículos nuevos con más variedad.
 - Añadir ciudades en lotes moderados — en marcha de forma continua vía la
   cola de publicación; no es un hito puntual que se pueda cerrar.
-- Mantener copias de seguridad — **sin confirmar**. La última copia
-  verificada de `places.db` en `docs/project-progress-summary.md` es del
-  23 de julio; no se ha tomado una nueva pese a los cambios de esta
-  sesión (borrado de un post en WordPress, ediciones de excerpt). Pendiente.
+- Mantener copias de seguridad — hecho. Backup nuevo tomado el 26 de
+  julio tras los cambios de esta sesión (checksum verificado en
+  `docs/project-progress-summary.md` §19).
 - Confirmar crecimiento de indexación e impresiones — **sin confirmar**.
   Requiere acceso a Search Console, que no está disponible desde aquí;
   solo lo puede revisar el operador.

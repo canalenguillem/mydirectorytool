@@ -438,6 +438,7 @@ negocios eliminados deliberadamente.
 /home/guillem/backups/dondecomerbien/2026-07-23_pre_term_descriptions/
 /home/guillem/backups/dondecomerbien/2026-07-23_pre_title_sample/
 /home/guillem/backups/dondecomerbien/2026-07-23_pre_repair_queue/
+/home/guillem/backups/dondecomerbien/2026-07-26_end_of_day/
 ```
 
 Backup previo a la cola de reparación:
@@ -445,6 +446,16 @@ Backup previo a la cola de reparación:
 ```text
 places.db
 SHA-256: 5e118dbd5ca9428b07bd7b516a6810be16881d484920e5193ebd4fd4756008e4
+```
+
+Backup de cierre del 26 de julio (tras las correcciones de excerpts,
+títulos/retórica y el borrado del post huérfano 44 — pendiente desde el
+23 de julio, tomado ahora porque desde entonces sí hubo cambios reales en
+producción):
+
+```text
+places.db
+SHA-256: 22d15244d486cd606521878c19545a05be4f57abd6fc54a7178c1e271b023bbd
 ```
 
 ## 20. Decisiones de arquitectura
