@@ -111,6 +111,26 @@ El alta debe solicitar:
 
 El asistente debe crear un proyecto en borrador y ejecutar pruebas de conexión antes de permitir publicaciones.
 
+### Criterio de salida: barra de calidad de monetización
+
+Antes de dar por lanzado un directorio nuevo, debe cumplir los mismos
+requisitos que permitieron aprobar AdSense en Dónde comer bien en menos
+de una semana (26 de julio de 2026):
+
+- Contenido original suficiente por ficha (no descripciones vacías ni
+  genéricas).
+- Navegación funcional: taxonomías, archivos y enlazado interno
+  operativos, no solo fichas sueltas.
+- Sin contenido fino ni duplicado — páginas con poco inventario en
+  `noindex` hasta que tengan suficiente contenido propio.
+- Página de privacidad y aviso legal publicados.
+
+No es un requisito solo de SEO: condiciona si el directorio puede
+monetizarse desde el primer día o si hay que esperar a una revisión
+posterior de Google. Conviene comprobarlo con la misma auditoría que ya
+existe (`scripts/audit-wordpress-content.php`) antes de solicitar
+AdSense para un proyecto nuevo, no después.
+
 ## Fase 5: enriquecimiento y contacto comercial
 
 - Capturar correo solo desde fuentes autorizadas y registrando procedencia.
