@@ -623,3 +623,26 @@ ficheros (refactor sin cambio de comportamiento, ya desplegado) para poder
 testear el manejo de errores del pipeline sin mockear OpenAI, WordPress ni
 Google Places. 43/43 en verde. Detalle en
 `docs/inventories/2026-07-26-queue-tests.md`.
+
+# Actualización: restricciones de integridad + logs estructurados
+
+Cerrados los dos últimos puntos de Fase 1. `review` tenía 81 filas
+duplicadas reales (16 fichas afectadas, misma tanda de reseñas insertada
+dos veces); desduplicadas y protegidas con un índice único
+(`idx_review_unique`), igual que `place_image`
+(`idx_place_image_unique`, sin duplicados previos) y que `place.place_id`
+(`idx_place_id`, ya existía en producción pero ahora está declarado en
+`init_db()`). Todo dentro de `init_db()`, mismo patrón idempotente que
+`_ensure_columns()`, para que cualquier instalación futura quede
+protegida desde el primer arranque. Backup tomado justo antes de
+desplegar por ser un cambio que borra filas de verdad. Resultado real:
+1910 → 1829 filas de `review`, 0 duplicados.
+
+Además, las 39 llamadas a `print()` (y 2 `traceback.print_exc()`) que
+quedaban en el backend se sustituyeron por `logging` estándar,
+reutilizando la convención de prefijos que ya existía en el código
+(`[ERROR]`/`[WARN]`/`[OK]`) para mapear los niveles casi mecánicamente.
+`docker logs` sigue siendo el mismo canal de siempre, solo con formato
+de verdad (timestamp, nivel, módulo). Detalle completo, con los
+chequeos de Alembic repetidos para confirmar que `orm.py` sigue fiel al
+esquema real, en `docs/inventories/2026-07-26-integrity-and-logging.md`.

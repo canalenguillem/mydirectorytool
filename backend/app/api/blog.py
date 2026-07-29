@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter
 from app.models.database import (
     enrich_place_details,
@@ -16,6 +18,7 @@ import os
 
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 WP_URL = config("WP_URL")
 AUTH = (config("WP_USER"), config("WP_APP_PASS"))
@@ -58,7 +61,7 @@ def publicar_article(place_id: str):
     data["categoria_id"] = categoria_id
     data["tipo_de_comida"] = detectar_tipo_comida(data["content"], place_id)
     set_place_food_type(place_id, data["tipo_de_comida"])
-    print(f'tipo de comida {data["tipo_de_comida"]} ')
+    logger.debug(f'tipo de comida {data["tipo_de_comida"]} ')
     data["excerpt"] = generar_excerpt(data["content"], place_id)
 
 
@@ -177,7 +180,7 @@ def pujar_i_associar_imatges_addicionals(place_id, post_id):
 
     for img_path in image_paths:
         if not os.path.exists(img_path):
-            print(f"[WARN] Imatge no trobada: {img_path}")
+            logger.warning(f"Imatge no trobada: {img_path}")
             continue
 
         with open(img_path, "rb") as img:
@@ -203,11 +206,11 @@ def pujar_i_associar_imatges_addicionals(place_id, post_id):
 
             if patch_res.status_code == 200:
                 uploaded_urls.append(media_url)
-                print(f"[OK] Imatge {filename} pujada i associada")
+                logger.info(f"Imatge {filename} pujada i associada")
             else:
-                print(f"[ERROR] No s'ha pogut associar {filename}: {patch_res.status_code} -> {patch_res.text}")
+                logger.error(f"No s'ha pogut associar {filename}: {patch_res.status_code} -> {patch_res.text}")
         else:
-            print(f"[ERROR] Error pujant {filename}: {media_res.status_code} -> {media_res.text}")
+            logger.error(f"Error pujant {filename}: {media_res.status_code} -> {media_res.text}")
 
     # Guardar les URLs al camp ACF (si tens activat place_gallery)
     if uploaded_urls:
@@ -217,9 +220,9 @@ def pujar_i_associar_imatges_addicionals(place_id, post_id):
             json={"fields": {"place_gallery": ",".join(uploaded_urls)}}
         )
         if acf_res.status_code == 200:
-            print(f"[OK] Galeria ACF actualitzada")
+            logger.info("Galeria ACF actualitzada")
         else:
-            print(f"[ERROR] No s'ha pogut actualitzar ACF: {acf_res.status_code} -> {acf_res.text}")
+            logger.error(f"No s'ha pogut actualitzar ACF: {acf_res.status_code} -> {acf_res.text}")
 
 
 @router.post("/blog/full-publish")

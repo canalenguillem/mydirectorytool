@@ -1,6 +1,9 @@
+import logging
 import sqlite3
 import json
 import os
+
+logger = logging.getLogger(__name__)
 
 DB_PATH = "places.db"
 OUTPUT_DIR = "exports"
@@ -44,7 +47,8 @@ def exportar_reviews():
             json.dump(data, f, ensure_ascii=False, indent=2)
 
     conn.close()
-    print(f"✅ {len(place_ids)} fitxers JSON creats a la carpeta '{OUTPUT_DIR}'")
+    logger.info(f"{len(place_ids)} fitxers JSON creats a la carpeta '{OUTPUT_DIR}'")
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
     exportar_reviews()

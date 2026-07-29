@@ -29,18 +29,21 @@ No se debe hacer una gran refactorización mientras una publicación masiva est�
 
 ## Fase 1: calidad y robustez
 
-Estado: en marcha, 3 de 7 puntos completados el 26 de julio de 2026.
+Estado: en marcha, 5 de 7 puntos completados (3 el 26 de julio, 2 más el
+29 de julio de 2026). Solo quedan homogeneizar HTTP y timeouts/reintentos
+sistemáticos.
 
 - Homogeneizar respuestas y códigos HTTP — pendiente.
 - Añadir timeouts y reintentos específicos a todas las integraciones —
   pendiente. Existe un timeout genérico en `wordpress.py`
   (`REQUEST_TIMEOUT = 60`), pero no es sistemático ni cubre reintentos.
 - Evitar duplicados de lugares, reseñas e imágenes mediante restricciones
-  — pendiente. Se descubrió el 26 de julio que `place.place_id` ya tiene
-  un índice único en producción (`idx_place_id`), pero no está declarado
-  en `init_db()` ni documentado en ningún sitio hasta ahora
-  (`docs/inventories/2026-07-26-sqlalchemy-alembic-baseline.md`) — no hay
-  restricciones equivalentes para `review` ni `place_image`.
+  — **hecho**. `review` tenía 81 filas duplicadas reales (16 fichas);
+  desduplicadas y con índice único (`idx_review_unique`).
+  `place_image` (`idx_place_image_unique`) y `place.place_id`
+  (`idx_place_id`, ya existía en producción pero ahora declarado en
+  `init_db()`) también protegidos, mismo patrón idempotente que
+  `_ensure_columns()` (`docs/inventories/2026-07-26-integrity-and-logging.md`).
 - Introducir migraciones de base de datos — **hecho**. Modelos
   SQLAlchemy fieles al esquema real + migración base de Alembic,
   verificados contra una copia de `places.db`
@@ -50,10 +53,12 @@ Estado: en marcha, 3 de 7 puntos completados el 26 de julio de 2026.
   hecho**. 43 tests unitarios cubriendo la máquina de estados de las dos
   colas (`docs/inventories/2026-07-26-queue-tests.md`). Sin tests de
   integración HTTP ni mocks de OpenAI/WordPress/Google todavía.
-- Añadir logs estructurados y métricas de costes — **parcialmente
-  hecho**. Métricas de coste de OpenAI implementadas
-  (`docs/inventories/2026-07-24-openai-token-usage.md`). Logs
-  estructurados pendientes: el código sigue usando `print()` suelto.
+- Añadir logs estructurados y métricas de costes — **hecho**. Métricas
+  de coste de OpenAI implementadas
+  (`docs/inventories/2026-07-24-openai-token-usage.md`). Las 39
+  llamadas a `print()` que quedaban en el backend se sustituyeron por
+  `logging` estándar con nivel, timestamp y módulo
+  (`docs/inventories/2026-07-26-integrity-and-logging.md`).
 - Crear proceso seguro de enriquecimiento histórico por lotes — hecho
   (la cola de reparación cubre este caso).
 

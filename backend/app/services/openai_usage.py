@@ -1,8 +1,11 @@
+import logging
 import sqlite3
 import time
 from typing import Any
 
 from app.models.database import DB_PATH
+
+logger = logging.getLogger(__name__)
 
 
 def record_openai_usage(
@@ -47,7 +50,7 @@ def record_openai_usage(
                 ),
             )
     except Exception as exc:
-        print(f"[WARN] No se pudo registrar el uso de OpenAI: {exc}")
+        logger.warning(f"No se pudo registrar el uso de OpenAI: {exc}")
 
 
 def get_usage_summary(days: int = 30) -> dict:

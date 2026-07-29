@@ -122,6 +122,9 @@ class Place(Base):
 
 class Review(Base):
     __tablename__ = "review"
+    __table_args__ = (
+        Index("idx_review_unique", "place_id", "author_name", "text", "time", unique=True),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     place_id: Mapped[str | None] = mapped_column(Text)
@@ -154,6 +157,9 @@ class BlogArticle(Base):
 
 class PlaceImage(Base):
     __tablename__ = "place_image"
+    __table_args__ = (
+        Index("idx_place_image_unique", "place_id", "image_path", unique=True),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     place_id: Mapped[str | None] = mapped_column(Text, ForeignKey("place.place_id"))

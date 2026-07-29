@@ -1,11 +1,18 @@
+import logging
+import os
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from app.api import auth, places, blog, queue, repair_queue, usage
 from app.models.database import init_db
 from app.services.publication_queue import start_worker
 from app.services.repair_queue import start_worker as start_repair_worker
 
-import os
-from fastapi.middleware.cors import CORSMiddleware
+logging.basicConfig(
+    level=os.environ.get("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
 
 app = FastAPI()
 

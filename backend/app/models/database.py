@@ -1,9 +1,12 @@
 import sqlite3
 import hashlib
 import json
+import logging
 from app.services.google_places import buscar_lugares
 import os
 import time
+
+logger = logging.getLogger(__name__)
 
 DATA_DIR = os.environ.get("DATA_DIR", ".")
 DB_PATH = os.path.join(DATA_DIR, "places.db")
@@ -242,6 +245,26 @@ def init_db():
         VALUES (1, 0, 300, NULL, strftime('%s', 'now'))
     """)
 
+    # Restricciones de integridad (26 de julio de 2026). El DELETE es
+    # idempotente: solo borra algo la primera vez que se ejecuta contra
+    # una base con duplicados históricos; en instalaciones ya limpias no
+    # hace nada. Ver docs/inventories/2026-07-26-integrity-and-logging.md.
+    c.execute("""
+        DELETE FROM review
+        WHERE id NOT IN (
+            SELECT MIN(id) FROM review
+            GROUP BY place_id, author_name, text, time
+        )
+    """)
+    c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_place_id ON place(place_id)")
+    c.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_review_unique "
+        "ON review(place_id, author_name, text, time)"
+    )
+    c.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_place_image_unique "
+        "ON place_image(place_id, image_path)"
+    )
 
     conn.commit()
     conn.close()
@@ -251,7 +274,7 @@ def hash_query(query):
     return hashlib.sha256(query.lower().encode()).hexdigest()
 
 def get_or_create_search(query):
-    print("get_or_create_search")
+    logger.debug("get_or_create_search")
     query_hash = hash_query(query)
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -260,7 +283,7 @@ def get_or_create_search(query):
     c.execute("SELECT id FROM search WHERE query_hash = ?", (query_hash,))
     row = c.fetchone()
     if row:
-        print(f"dins if row {row[0]}")
+        logger.debug(f"dins if row {row[0]}")
         search_id = row[0]
         c.execute("""
             SELECT name, address, place_id, rating, postal_code, phone, website,
@@ -290,7 +313,7 @@ def get_or_create_search(query):
         return places
     else:
         # Fetch des de l'API
-        print(f"dins buscar lugares")
+        logger.debug("dins buscar lugares")
         lugares = buscar_lugares(query)
         c.execute("INSERT INTO search (query, query_hash) VALUES (?, ?)", (query, query_hash))
         search_id = c.lastrowid
@@ -311,7 +334,7 @@ def get_or_create_search(query):
                     "latitude": location.get("lat"),
                     "longitude": location.get("lng"),
                 }
-                print(f"[WARN] Sin detalles para {lugar['place_id']}: {exc}")
+                logger.warning(f"Sin detalles para {lugar['place_id']}: {exc}")
 
             c.execute("""
                 INSERT OR IGNORE INTO search_result (
@@ -793,7 +816,7 @@ def get_article_data(place_id):
         with open(data["article_path"], "r", encoding="utf-8") as f:
             data["content"] = f.read()
     except Exception as e:
-        print(f"[ERROR] No s'ha trobat el fitxer .md: {data['article_path']}")
+        logger.error(f"No s'ha trobat el fitxer .md: {data['article_path']}")
         data["content"] = ""
 
     # Títol per defecte

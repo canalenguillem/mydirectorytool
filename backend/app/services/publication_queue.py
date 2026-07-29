@@ -1,9 +1,11 @@
+import logging
 import sqlite3
 import threading
 import time
-import traceback
 
 from app.models.database import DB_PATH
+
+logger = logging.getLogger(__name__)
 
 
 _worker_thread: threading.Thread | None = None
@@ -277,7 +279,7 @@ def _process_once() -> str | None:
         try:
             _run_pipeline(place_id)
         except Exception as exc:
-            traceback.print_exc()
+            logger.exception(f"Fallo procesando {place_id}")
             _finish(place_id, str(exc)[:2000])
         else:
             _finish(place_id)

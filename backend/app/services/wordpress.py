@@ -1,3 +1,4 @@
+import logging
 import os
 import mimetypes
 from PIL import Image
@@ -7,6 +8,8 @@ import sqlite3
 from bs4 import BeautifulSoup
 from decouple import config
 from app.models.database import DB_PATH
+
+logger = logging.getLogger(__name__)
 
 # Configuració
 WP_URL = config("WP_URL")
@@ -34,8 +37,8 @@ def _prepare_media_path(image_path: str) -> str:
                 break
             quality -= 10
 
-    print(
-        f"[OK] Imatge optimitzada per WordPress: "
+    logger.info(
+        f"Imatge optimitzada per WordPress: "
         f"{os.path.getsize(image_path)} -> {os.path.getsize(output_path)} bytes"
     )
     return output_path
@@ -54,14 +57,14 @@ def _upload_media(image_path: str) -> int | None:
             timeout=REQUEST_TIMEOUT,
         )
     if response.status_code != 201:
-        print(f"[ERROR] Error pujant {filename}: {response.status_code} -> {response.text}")
+        logger.error(f"Error pujant {filename}: {response.status_code} -> {response.text}")
         return None
     return response.json().get("id")
 
 
 def ensure_featured_image(post_id: int, image_path: str) -> bool:
     if not image_path or not os.path.exists(image_path):
-        print(f"[ERROR] Imatge destacada local no trobada: {image_path}")
+        logger.error(f"Imatge destacada local no trobada: {image_path}")
         return False
 
     image_path = _prepare_media_path(image_path)
@@ -92,9 +95,9 @@ def ensure_featured_image(post_id: int, image_path: str) -> bool:
         timeout=REQUEST_TIMEOUT,
     )
     if assigned.status_code != 200 or assigned.json().get("featured_media") != media_id:
-        print(f"[ERROR] WordPress no ha assignat la destacada al post {post_id}: {assigned.text}")
+        logger.error(f"WordPress no ha assignat la destacada al post {post_id}: {assigned.text}")
         return False
-    print(f"[OK] Imatge destacada {media_id} assignada al post {post_id}")
+    logger.info(f"Imatge destacada {media_id} assignada al post {post_id}")
     return True
 
 
@@ -197,15 +200,15 @@ def get_or_create_category(cpostal: str) -> int | None:
     r = requests.get(f"{WP_URL}/wp-json/wp/v2/categories?search={cpostal}", auth=AUTH)
     
     if r.status_code != 200:
-        print(f"[ERROR] No s'ha pogut obtenir categories. Status: {r.status_code}")
-        print(f"Resposta: {r.text}")
+        logger.error(f"No s'ha pogut obtenir categories. Status: {r.status_code}")
+        logger.error(f"Resposta: {r.text}")
         return None
 
     try:
         results = r.json()
     except Exception as e:
-        print(f"[ERROR] JSON Decode Error: {e}")
-        print(f"Resposta del servidor: {r.text}")
+        logger.error(f"JSON Decode Error: {e}")
+        logger.error(f"Resposta del servidor: {r.text}")
         return None
 
     if results:
@@ -215,8 +218,8 @@ def get_or_create_category(cpostal: str) -> int | None:
     if r.status_code == 201:
         return r.json()["id"]
     else:
-        print(f"[ERROR] No s'ha pogut crear la categoria. Status: {r.status_code}")
-        print(f"Resposta: {r.text}")
+        logger.error(f"No s'ha pogut crear la categoria. Status: {r.status_code}")
+        logger.error(f"Resposta: {r.text}")
     return None
 
 def publicar_article_restaurante(data: dict) -> int | None:
@@ -224,7 +227,7 @@ def publicar_article_restaurante(data: dict) -> int | None:
 
     article_path = data.get("article_path")
     if not article_path or not os.path.exists(article_path):
-        print(f"[ERROR] No s'ha trobat el fitxer .md: {article_path}")
+        logger.error(f"No s'ha trobat el fitxer .md: {article_path}")
         return None
 
     try:
@@ -272,7 +275,7 @@ def publicar_article_restaurante(data: dict) -> int | None:
             a["rel"] = "noopener noreferrer"
         html_content = str(soup)
     except Exception as e:
-        print(f"[ERROR] Error llegint/converntint markdown: {e}")
+        logger.error(f"Error llegint/converntint markdown: {e}")
         return None
 
     featured_image_path = None
@@ -289,7 +292,7 @@ def publicar_article_restaurante(data: dict) -> int | None:
     # La destacada se sube antes de crear el post y se incluye en la misma
     # petición. Si falla, no se crea una ficha incompleta.
     if not featured_image_path or not os.path.exists(featured_image_path):
-        print(f"[ERROR] No hi ha imatge destacada local per {place_id}")
+        logger.error(f"No hi ha imatge destacada local per {place_id}")
         return None
     featured_media_id = _upload_media(featured_image_path)
     if not featured_media_id:
@@ -306,20 +309,20 @@ def publicar_article_restaurante(data: dict) -> int | None:
 
     r = requests.post(f"{WP_URL}/wp-json/wp/v2/restaurante", auth=AUTH, json=post_data)
     if r.status_code != 201:
-        print(f"[ERROR] Error al publicar: {r.status_code} -> {r.text}")
+        logger.error(f"Error al publicar: {r.status_code} -> {r.text}")
         return None
 
     response = r.json()
     post_id = response.get("id")
     post_link = response.get("link", "")
     data["wp_url"] = post_link
-    print(f"[OK] Publicat: {post_link}")
+    logger.info(f"Publicat: {post_link}")
 
     # Verificación explícita: publicar no se considera correcto si WordPress
     # ignora la imagen indicada al crear el post.
     if response.get("featured_media") != featured_media_id:
         if not ensure_featured_image(post_id, featured_image_path):
-            print(f"[ERROR] El post {post_id} ha quedat sense destacada")
+            logger.error(f"El post {post_id} ha quedat sense destacada")
 
     # 🖼️ Pujar imatges addicionals i recollir URLs
     image_paths = get_all_images_for_place(place_id)
@@ -345,9 +348,9 @@ def publicar_article_restaurante(data: dict) -> int | None:
                     auth=AUTH,
                     json={"post": post_id}
                 )
-                print(f"[OK] Imatge {filename} pujada i associada al post")
+                logger.info(f"Imatge {filename} pujada i associada al post")
             else:
-                print(f"[ERROR] Error pujant imatge {filename}: {media_res.status_code} -> {media_res.text}")
+                logger.error(f"Error pujant imatge {filename}: {media_res.status_code} -> {media_res.text}")
 
     # 🔗 Guardar les URLs de la galeria al custom field ACF (place_gallery)
     if gallery_urls:
@@ -359,9 +362,9 @@ def publicar_article_restaurante(data: dict) -> int | None:
             json=acf_payload
         )
         if acf_res.status_code == 200:
-            print(f"[OK] Camp place_gallery actualitzat amb {len(gallery_urls)} imatges")
+            logger.info(f"Camp place_gallery actualitzat amb {len(gallery_urls)} imatges")
         else:
-            print(f"[ERROR] Error guardant place_gallery: {acf_res.status_code} -> {acf_res.text}")
+            logger.error(f"Error guardant place_gallery: {acf_res.status_code} -> {acf_res.text}")
 
     return post_id
 
@@ -372,8 +375,8 @@ def guardar_campos_acf(post_id: int, acf_data: dict):
         json={"fields": acf_data}
     )
     if r.status_code == 200:
-        print(f"[OK] Camps ACF guardats")
+        logger.info("Camps ACF guardats")
         return True
     else:
-        print(f"[ERROR] ACF: {r.status_code} -> {r.text}")
+        logger.error(f"ACF: {r.status_code} -> {r.text}")
         return False

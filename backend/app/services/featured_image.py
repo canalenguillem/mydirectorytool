@@ -1,5 +1,9 @@
+import logging
 import sqlite3
 from app.models.database import DB_PATH
+
+logger = logging.getLogger(__name__)
+
 
 def set_featured_image(place_id: str, image_path: str):
     conn = sqlite3.connect(DB_PATH)
@@ -11,4 +15,4 @@ def set_featured_image(place_id: str, image_path: str):
     """, (place_id, image_path))
     conn.commit()
     conn.close()
-    print(f"[OK] Imatge destacada registrada per {place_id}")
+    logger.info(f"Imatge destacada registrada per {place_id}")
