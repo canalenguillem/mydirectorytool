@@ -102,14 +102,16 @@ def ensure_featured_image(post_id: int, image_path: str) -> bool:
 
 
 def obtener_post_publicado(post_id: int) -> dict | None:
-    """Título, URL y extracto de un post YA publicado (fichas de negocio,
-    post_type=restaurante). Usado para reunir los "ingredientes" de un
-    artículo de resumen (roundup) sin tener que releer datos locales que
-    puedan haber quedado desactualizados frente a lo que hay en WordPress."""
+    """Título, URL, extracto e imagen destacada de un post YA publicado
+    (fichas de negocio, post_type=restaurante). Usado para reunir los
+    "ingredientes" de un artículo de resumen (roundup) sin tener que
+    releer datos locales que puedan haber quedado desactualizados frente
+    a lo que hay en WordPress. `_embed=true` trae la imagen destacada en
+    la misma petición, sin una llamada aparte a /media."""
     r = requests.get(
         f"{WP_URL}/wp-json/wp/v2/restaurante/{post_id}",
         auth=AUTH,
-        params={"_fields": "id,title,link,excerpt"},
+        params={"_fields": "id,title,link,excerpt,_links,_embedded", "_embed": "wp:featuredmedia"},
         timeout=REQUEST_TIMEOUT,
     )
     if r.status_code != 200:
@@ -118,11 +120,13 @@ def obtener_post_publicado(post_id: int) -> dict | None:
     data = r.json()
     excerpt_html = data.get("excerpt", {}).get("rendered", "")
     excerpt_text = BeautifulSoup(excerpt_html, "html.parser").get_text().strip()
+    media = (data.get("_embedded", {}).get("wp:featuredmedia") or [{}])[0]
     return {
         "post_id": data.get("id"),
         "title": BeautifulSoup(data.get("title", {}).get("rendered", ""), "html.parser").get_text(),
         "link": data.get("link", ""),
         "excerpt": excerpt_text,
+        "image_url": media.get("source_url", ""),
     }
 
 
@@ -149,6 +153,25 @@ def crear_post_generico(title: str, html_content: str, excerpt: str = "", featur
         return None
     response = r.json()
     logger.info(f"Post de resumen publicado: {response.get('link', '')}")
+    return {"id": response.get("id"), "link": response.get("link", "")}
+
+
+def actualizar_post_generico(post_id: int, title: str, html_content: str, excerpt: str = "", featured_media_id: int | None = None) -> dict | None:
+    """Actualiza un post estándar (post_type=post) ya publicado -- para
+    regenerar un roundup existente (ej. añadir las fotos por negocio a uno
+    creado antes de que este mecanismo existiera) sin duplicarlo."""
+    post_data = {"title": title, "content": html_content}
+    if excerpt:
+        post_data["excerpt"] = excerpt
+    if featured_media_id:
+        post_data["featured_media"] = featured_media_id
+
+    r = requests.post(f"{WP_URL}/wp-json/wp/v2/posts/{post_id}", auth=AUTH, json=post_data, timeout=REQUEST_TIMEOUT)
+    if r.status_code != 200:
+        logger.error(f"Error al actualizar el post de resumen {post_id}: {r.status_code} -> {r.text}")
+        return None
+    response = r.json()
+    logger.info(f"Post de resumen actualizado: {response.get('link', '')}")
     return {"id": response.get("id"), "link": response.get("link", "")}
 
 

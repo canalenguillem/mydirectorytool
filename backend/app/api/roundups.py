@@ -4,8 +4,9 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.models.database import get_all_images_for_place, get_places_by_ids
-from app.services.roundup_writer import generar_articulo_resumen, generar_excerpt_resumen
+from app.services.roundup_writer import generar_articulo_resumen, generar_excerpt_resumen, insertar_imagenes
 from app.services.wordpress import (
+    actualizar_post_generico,
     crear_post_generico,
     markdown_a_html_restaurante,
     obtener_post_publicado,
@@ -18,6 +19,7 @@ router = APIRouter()
 class RoundupRequest(BaseModel):
     tema: str
     place_ids: list[str]
+    post_id: int | None = None
 
 
 @router.post("/generate")
@@ -45,12 +47,14 @@ def generate_roundup(data: RoundupRequest):
                 "rating": place["rating"],
                 "url": published["link"],
                 "excerpt": published["excerpt"] or published["title"],
+                "image_url": published.get("image_url", ""),
             }
         )
 
     md_text = generar_articulo_resumen(data.tema, lugares)
     title_match = re.search(r"^# (.+)", md_text, re.MULTILINE)
     title = title_match.group(1).strip() if title_match else data.tema
+    md_text = insertar_imagenes(md_text, lugares)
     html_content = markdown_a_html_restaurante(md_text)
     excerpt = generar_excerpt_resumen(md_text)
 
@@ -62,7 +66,10 @@ def generate_roundup(data: RoundupRequest):
     if images:
         featured_media_id = upload_media(images[0])
 
-    result = crear_post_generico(title, html_content, excerpt, featured_media_id)
+    if data.post_id:
+        result = actualizar_post_generico(data.post_id, title, html_content, excerpt, featured_media_id)
+    else:
+        result = crear_post_generico(title, html_content, excerpt, featured_media_id)
     if not result:
         raise HTTPException(status_code=502, detail="No se pudo publicar el artículo")
 

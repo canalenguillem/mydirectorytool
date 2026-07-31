@@ -54,6 +54,24 @@ Responde solo con el markdown del artículo, sin explicaciones adicionales ni bl
     return md_text
 
 
+def insertar_imagenes(md_text: str, lugares: list[dict]) -> str:
+    """Inserta la imagen destacada de cada negocio (ya subida a WordPress
+    en su propia ficha, no se sube nada nuevo) justo debajo de su
+    subtítulo "## Nombre". Si un lugar no tiene imagen conocida, su
+    apartado se queda igual que antes -- no rompe nada."""
+    by_name = {l["name"]: l.get("image_url", "") for l in lugares}
+    output = []
+    for line in md_text.splitlines():
+        output.append(line)
+        heading_match = re.match(r"^##\s+(.+)$", line.strip())
+        if heading_match:
+            image_url = by_name.get(heading_match.group(1).strip())
+            if image_url:
+                output.append("")
+                output.append(f"![{heading_match.group(1).strip()}]({image_url})")
+    return "\n".join(output)
+
+
 def generar_excerpt_resumen(md_text: str) -> str:
     from app.services.openai_writer import generar_excerpt
 
