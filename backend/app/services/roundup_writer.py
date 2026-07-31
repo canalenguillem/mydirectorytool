@@ -36,6 +36,10 @@ Datos reales a incluir (no inventes ninguno más, no cambies valoraciones, nombr
 
 Estructura pedida:
 1. Un título atractivo en una línea, precedido por "# " (markdown), relacionado con "{tema}" pero no genérico ni con fórmulas trilladas tipo "Los mejores sitios para...".
+   ⛔️ Evita estas palabras y estructuras -- se han repetido en artículos de resumen anteriores de este sitio y un lector que vea varios los nota enseguida:
+   - La palabra "mesa" o "mesas" como sinónimo de "restaurante" o "sitio para comer" (ni siquiera dentro de otra expresión, tipo "sentarse a la mesa").
+   - La estructura "[Número en letras] + [sustantivo plural del tema] que + verbo" (ej. "Ocho mesas que justifican...", "Diez sitios que merecen...", "Siete paradas que valen la pena...").
+   - Empezar el título con un número escrito en letras.
 2. Una introducción de 80-120 palabras sobre "{tema}" que dé contexto (zona, qué tienen en común, para quién es útil esta selección), sin frases genéricas tipo "si buscas..." ni relleno.
 3. Un apartado por cada uno de los {len(lugares)} negocios, con su nombre como subtítulo "## Nombre", 50-80 palabras cada uno, usando el dato real dado (valoración, ubicación, extracto) pero con SU PROPIA frase de apertura distinta en cada uno -- prohibido repetir la misma estructura de frase en dos apartados seguidos, prohibido usar "no es X, sino Y", prohibido empezar dos apartados con la misma palabra. Termina cada apartado con un enlace markdown de una sola línea con el texto "Ver ficha completa de [nombre]" apuntando exactamente a la URL dada (no la cambies).
 4. Un cierre de 50-80 palabras con una recomendación práctica (por ejemplo, cómo elegir entre ellos según el plan) -- no un resumen genérico.
