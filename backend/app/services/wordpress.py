@@ -222,6 +222,77 @@ def get_or_create_category(cpostal: str) -> int | None:
         logger.error(f"Resposta: {r.text}")
     return None
 
+def markdown_a_html_restaurante(md_text: str) -> str:
+    """Convierte el markdown de un artículo (título H1 + cuerpo + bloque SEO
+    final + llamada a la acción) al HTML que espera el post de WordPress:
+    sin el H1 (va aparte en `post_title`), sin el bloque SEO, y con el
+    bloque de teléfono/web conservado pero sin el encabezado de la llamada
+    a la acción. Extraído de publicar_article_restaurante para poder
+    reutilizarlo también al actualizar artículos ya publicados
+    (actualizar_articulo_restaurante)."""
+    lines = md_text.splitlines()
+    content_lines = [l for i, l in enumerate(lines) if not (i == 0 and l.startswith("# "))]
+    # Eliminar todo a partir del último --- que precede al bloque SEO
+    seo_keywords = ("**META-DESCRIPCIÓN", "**LLAMADA A LA ACCIÓN", "**PALABRAS CLAVE")
+    cutoff = None
+    for i, l in enumerate(content_lines):
+        if any(l.strip().startswith(k) for k in seo_keywords):
+            # Retroceder para incluir el --- separador
+            cutoff = i - 1 if i > 0 and content_lines[i-1].strip() == "---" else i
+            break
+    if cutoff is not None:
+        content_lines = content_lines[:cutoff]
+
+    # Strip "Llamada a la acción final" section but keep phone/website block after ---
+    cta_start = None
+    for i, l in enumerate(content_lines):
+        if l.strip().startswith("## Llamada a la acción"):
+            cta_start = i
+            break
+    if cta_start is not None:
+        phone_lines = []
+        sep_count = 0
+        in_phone_block = False
+        for i in range(cta_start, len(content_lines)):
+            if content_lines[i].strip() == "---":
+                sep_count += 1
+                if sep_count == 1:
+                    in_phone_block = True
+                else:
+                    break
+            elif in_phone_block:
+                phone_lines.append(content_lines[i])
+        content_lines = content_lines[:cta_start] + phone_lines
+
+    html_content = markdown2.markdown("\n".join(content_lines), extras=["linkify"])
+    soup = BeautifulSoup(html_content, "html.parser")
+    for a in soup.find_all("a", href=True):
+        a["target"] = "_blank"
+        a["rel"] = "noopener noreferrer"
+    return str(soup)
+
+
+def actualizar_articulo_restaurante(post_id: int, title: str, html_content: str, excerpt: str = "") -> bool:
+    """Actualiza título/contenido/extracto de un post YA publicado. Mismo
+    patrón de POST parcial contra /wp-json/wp/v2/restaurante/{post_id} que
+    ya usan ensure_featured_image y actualizar_excerpts_faltantes (blog.py)
+    -- no crea un post nuevo, solo pisa los campos indicados."""
+    payload = {"title": title, "content": html_content}
+    if excerpt:
+        payload["excerpt"] = excerpt
+    r = requests.post(
+        f"{WP_URL}/wp-json/wp/v2/restaurante/{post_id}",
+        auth=AUTH,
+        json=payload,
+        timeout=REQUEST_TIMEOUT,
+    )
+    if r.status_code != 200:
+        logger.error(f"Error actualizando post {post_id}: {r.status_code} -> {r.text}")
+        return False
+    logger.info(f"Post {post_id} actualizado (título/contenido/extracto)")
+    return True
+
+
 def publicar_article_restaurante(data: dict) -> int | None:
     from app.models.database import get_all_images_for_place
 
@@ -233,47 +304,7 @@ def publicar_article_restaurante(data: dict) -> int | None:
     try:
         with open(article_path, "r") as f:
             md_text = f.read()
-        # Eliminar el título H1 y el bloque SEO final (META-DESCRIPCIÓN, PALABRAS CLAVE, etc.)
-        lines = md_text.splitlines()
-        content_lines = [l for i, l in enumerate(lines) if not (i == 0 and l.startswith("# "))]
-        # Eliminar todo a partir del último --- que precede al bloque SEO
-        seo_keywords = ("**META-DESCRIPCIÓN", "**LLAMADA A LA ACCIÓN", "**PALABRAS CLAVE")
-        cutoff = None
-        for i, l in enumerate(content_lines):
-            if any(l.strip().startswith(k) for k in seo_keywords):
-                # Retroceder para incluir el --- separador
-                cutoff = i - 1 if i > 0 and content_lines[i-1].strip() == "---" else i
-                break
-        if cutoff is not None:
-            content_lines = content_lines[:cutoff]
-
-        # Strip "Llamada a la acción final" section but keep phone/website block after ---
-        cta_start = None
-        for i, l in enumerate(content_lines):
-            if l.strip().startswith("## Llamada a la acción"):
-                cta_start = i
-                break
-        if cta_start is not None:
-            phone_lines = []
-            sep_count = 0
-            in_phone_block = False
-            for i in range(cta_start, len(content_lines)):
-                if content_lines[i].strip() == "---":
-                    sep_count += 1
-                    if sep_count == 1:
-                        in_phone_block = True
-                    else:
-                        break
-                elif in_phone_block:
-                    phone_lines.append(content_lines[i])
-            content_lines = content_lines[:cta_start] + phone_lines
-
-        html_content = markdown2.markdown("\n".join(content_lines), extras=["linkify"])
-        soup = BeautifulSoup(html_content, "html.parser")
-        for a in soup.find_all("a", href=True):
-            a["target"] = "_blank"
-            a["rel"] = "noopener noreferrer"
-        html_content = str(soup)
+        html_content = markdown_a_html_restaurante(md_text)
     except Exception as e:
         logger.error(f"Error llegint/converntint markdown: {e}")
         return None
