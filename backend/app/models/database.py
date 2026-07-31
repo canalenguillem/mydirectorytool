@@ -966,6 +966,27 @@ def set_place_food_type(place_id: str, food_type: str) -> None:
         conn.close()
 
 
+def get_places_by_ids(place_ids: list[str]) -> list[dict]:
+    """Fichas concretas por place_id, en el mismo orden pedido -- usado
+    para reunir la "cesta" de un artículo de resumen (roundup)."""
+    if not place_ids:
+        return []
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    placeholders = ",".join("?" for _ in place_ids)
+    rows = conn.execute(
+        f"""
+        SELECT place_id, name, city, municipality, rating, publicado_en_wp, wp_post_id
+        FROM place
+        WHERE place_id IN ({placeholders})
+        """,
+        place_ids,
+    ).fetchall()
+    conn.close()
+    by_id = {row["place_id"]: dict(row) for row in rows}
+    return [by_id[pid] for pid in place_ids if pid in by_id]
+
+
 def get_article_data(place_id):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()

@@ -127,3 +127,9 @@ export interface SeedSearch {
 export interface SeedCandidate extends SearchResult {
   saved: boolean
 }
+
+export interface RoundupResult {
+  title: string
+  url: string
+  post_id: number
+}

@@ -44,7 +44,7 @@ def _prepare_media_path(image_path: str) -> str:
     return output_path
 
 
-def _upload_media(image_path: str) -> int | None:
+def upload_media(image_path: str) -> int | None:
     image_path = _prepare_media_path(image_path)
     filename = os.path.basename(image_path)
     mime_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
@@ -84,7 +84,7 @@ def ensure_featured_image(post_id: int, image_path: str) -> bool:
                 break
 
     if not media_id:
-        media_id = _upload_media(image_path)
+        media_id = upload_media(image_path)
     if not media_id:
         return False
 
@@ -99,6 +99,57 @@ def ensure_featured_image(post_id: int, image_path: str) -> bool:
         return False
     logger.info(f"Imatge destacada {media_id} assignada al post {post_id}")
     return True
+
+
+def obtener_post_publicado(post_id: int) -> dict | None:
+    """Título, URL y extracto de un post YA publicado (fichas de negocio,
+    post_type=restaurante). Usado para reunir los "ingredientes" de un
+    artículo de resumen (roundup) sin tener que releer datos locales que
+    puedan haber quedado desactualizados frente a lo que hay en WordPress."""
+    r = requests.get(
+        f"{WP_URL}/wp-json/wp/v2/restaurante/{post_id}",
+        auth=AUTH,
+        params={"_fields": "id,title,link,excerpt"},
+        timeout=REQUEST_TIMEOUT,
+    )
+    if r.status_code != 200:
+        logger.error(f"No se pudo leer el post {post_id}: {r.status_code} -> {r.text}")
+        return None
+    data = r.json()
+    excerpt_html = data.get("excerpt", {}).get("rendered", "")
+    excerpt_text = BeautifulSoup(excerpt_html, "html.parser").get_text().strip()
+    return {
+        "post_id": data.get("id"),
+        "title": BeautifulSoup(data.get("title", {}).get("rendered", ""), "html.parser").get_text(),
+        "link": data.get("link", ""),
+        "excerpt": excerpt_text,
+    }
+
+
+def crear_post_generico(title: str, html_content: str, excerpt: str = "", featured_media_id: int | None = None) -> dict | None:
+    """Crea un post estándar de WordPress (post_type=post, no restaurante).
+    Usado para artículos de resumen (roundups) que enlazan a varias fichas
+    -- no encajan como una ficha de negocio individual. Requiere
+    single.php/home.php en el tema para renderizarse (ver
+    docs/inventories/2026-07-30-seed-queue.md y el commit del tema del
+    31 de julio)."""
+    post_data = {
+        "title": title,
+        "content": html_content,
+        "status": "publish",
+    }
+    if excerpt:
+        post_data["excerpt"] = excerpt
+    if featured_media_id:
+        post_data["featured_media"] = featured_media_id
+
+    r = requests.post(f"{WP_URL}/wp-json/wp/v2/posts", auth=AUTH, json=post_data, timeout=REQUEST_TIMEOUT)
+    if r.status_code != 201:
+        logger.error(f"Error al crear el post de resumen: {r.status_code} -> {r.text}")
+        return None
+    response = r.json()
+    logger.info(f"Post de resumen publicado: {response.get('link', '')}")
+    return {"id": response.get("id"), "link": response.get("link", "")}
 
 
 def sync_place_images(post_id: int, place_id: str) -> dict:
@@ -158,7 +209,7 @@ def sync_place_images(post_id: int, place_id: str) -> dict:
             media_url = media["source_url"]
             reused += 1
         else:
-            media_id = _upload_media(prepared_path)
+            media_id = upload_media(prepared_path)
             if not media_id:
                 raise RuntimeError(f"No se pudo subir {filename}")
             media_response = requests.get(
@@ -325,7 +376,7 @@ def publicar_article_restaurante(data: dict) -> int | None:
     if not featured_image_path or not os.path.exists(featured_image_path):
         logger.error(f"No hi ha imatge destacada local per {place_id}")
         return None
-    featured_media_id = _upload_media(featured_image_path)
+    featured_media_id = upload_media(featured_image_path)
     if not featured_media_id:
         return None
 

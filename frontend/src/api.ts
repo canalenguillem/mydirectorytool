@@ -81,6 +81,13 @@ export const api = {
   seedCandidates: (searchId: number) =>
     req<{ candidates: import('./types').SeedCandidate[] }>(`/seed/searches/${searchId}/candidates`),
 
+  generateRoundup: (tema: string, placeIds: string[]) =>
+    req<import('./types').RoundupResult>('/roundups/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tema, place_ids: placeIds }),
+    }),
+
   search: (query: string) =>
     req<{ resultados: import('./types').SearchResult[] }>(`/places/search?query=${encodeURIComponent(query)}`),
 
