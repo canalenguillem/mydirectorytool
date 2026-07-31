@@ -4,7 +4,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, places, blog, queue, repair_queue, roundups, seed, usage
+from app.api import auth, baskets, places, blog, queue, repair_queue, roundups, seed, usage
 from app.models.database import init_db
 from app.services.publication_queue import start_worker
 from app.services.repair_queue import start_worker as start_repair_worker
@@ -53,4 +53,5 @@ app.include_router(queue.router, prefix="/queue", tags=["Queue"])
 app.include_router(repair_queue.router, prefix="/repair-queue", tags=["Repair Queue"])
 app.include_router(seed.router, prefix="/seed", tags=["Seed"])
 app.include_router(roundups.router, prefix="/roundups", tags=["Roundups"])
+app.include_router(baskets.router, prefix="/baskets", tags=["Baskets"])
 app.include_router(usage.router, prefix="/usage", tags=["Usage"])

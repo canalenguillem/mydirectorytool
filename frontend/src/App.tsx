@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { api } from './api'
-import type { Place, QueueStatus, RoundupResult, SearchResult, SeedCandidate, SeedQueueStatus, SeedSearch, UsageSummary } from './types'
+import type { Basket, BasketDetail, Place, QueueStatus, RoundupResult, SearchResult, SeedCandidate, SeedQueueStatus, SeedSearch, UsageSummary } from './types'
 
 type ActionStatus = { type: 'idle' | 'loading' | 'success' | 'error'; message?: string }
 
@@ -316,7 +316,7 @@ function PlaceCard({ place, onRefresh, inBasket, onToggleBasket }: {
           </div>
           <span className="text-gray-400 dark:text-gray-500 text-lg mt-0.5">{expanded ? '▲' : '▼'}</span>
         </button>
-        {onToggleBasket && !!place.publicado_en_wp && (
+        {onToggleBasket && (
           <button
             type="button"
             onClick={() => onToggleBasket(place.place_id)}
@@ -352,8 +352,16 @@ function PlaceCard({ place, onRefresh, inBasket, onToggleBasket }: {
   )
 }
 
-function SearchResultCard({ result, saved, onSaved }: { result: SearchResult; saved: boolean; onSaved: (placeId: string) => void }) {
+function SearchResultCard({ result, saved, onSaved, activeBasketId, inActiveBasket, onBasketUpdated }: {
+  result: SearchResult
+  saved: boolean
+  onSaved: (placeId: string) => void
+  activeBasketId?: number | null
+  inActiveBasket?: boolean
+  onBasketUpdated?: () => void
+}) {
   const [saving, setSaving] = useState(false)
+  const [addingToBasket, setAddingToBasket] = useState(false)
   const [error, setError] = useState('')
 
   const handleSave = async () => {
@@ -370,6 +378,24 @@ function SearchResultCard({ result, saved, onSaved }: { result: SearchResult; sa
     }
   }
 
+  const handleAddToBasket = async () => {
+    if (!activeBasketId || inActiveBasket) return
+    setAddingToBasket(true)
+    setError('')
+    try {
+      if (!saved) {
+        await api.savePlace(result.place_id)
+        onSaved(result.place_id)
+      }
+      await api.addPlaceToBasket(activeBasketId, result.place_id)
+      onBasketUpdated?.()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setAddingToBasket(false)
+    }
+  }
+
   return (
     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 rounded-xl p-4 flex items-start justify-between gap-3">
       <div className="flex-1 min-w-0">
@@ -382,15 +408,29 @@ function SearchResultCard({ result, saved, onSaved }: { result: SearchResult; sa
         )}
         <StarRating rating={result.rating} />
       </div>
-      <div className="shrink-0 text-right">
-        <button
-          onClick={handleSave}
-          disabled={saving || saved}
-          className={`text-xs px-3 py-2 rounded-lg flex items-center gap-1 ${saved ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-blue-600 hover:bg-blue-700 text-white'} disabled:opacity-70`}
-        >
-          {saving && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
-          {saved ? 'Guardado ✓' : 'Guardar'}
-        </button>
+      <div className="shrink-0 text-right flex flex-col items-end gap-1">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleSave}
+            disabled={saving || saved}
+            className={`text-xs px-3 py-2 rounded-lg flex items-center gap-1 ${saved ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-blue-600 hover:bg-blue-700 text-white'} disabled:opacity-70`}
+          >
+            {saving && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+            {saved ? 'Guardado ✓' : 'Guardar'}
+          </button>
+          {onBasketUpdated && (
+            <button
+              onClick={handleAddToBasket}
+              disabled={!activeBasketId || inActiveBasket || addingToBasket}
+              title={!activeBasketId ? 'Elige o crea una cesta primero' : inActiveBasket ? 'Ya está en la cesta' : 'Añadir a la cesta'}
+              className={`text-xs w-9 h-9 rounded-lg flex items-center justify-center ${inActiveBasket ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-green-600 hover:text-white dark:bg-gray-700 dark:text-gray-300'} disabled:opacity-50`}
+            >
+              {addingToBasket
+                ? <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                : inActiveBasket ? '✓' : '🧺'}
+            </button>
+          )}
+        </div>
         {error && <p className="text-[10px] text-red-600 dark:text-red-400 mt-1 max-w-32">{error}</p>}
       </div>
     </div>
@@ -778,6 +818,7 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
   const [fichasQuery, setFichasQuery] = useState('')
   const [searching, setSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [mapsMinRating, setMapsMinRating] = useState<string>('')
   const [places, setPlaces] = useState<Place[]>([])
   const [loadingPlaces, setLoadingPlaces] = useState(true)
   const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'published' | 'incomplete'>('all')
@@ -801,7 +842,12 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
   const [seedCandidatesLoading, setSeedCandidatesLoading] = useState(false)
   const [seedMinRating, setSeedMinRating] = useState<string>('')
   const [savingAllSeed, setSavingAllSeed] = useState(false)
-  const [basketPlaceIds, setBasketPlaceIds] = useState<Set<string>>(new Set())
+  const [baskets, setBaskets] = useState<Basket[]>([])
+  const [activeBasketId, setActiveBasketId] = useState<number | null>(null)
+  const [activeBasket, setActiveBasket] = useState<BasketDetail | null>(null)
+  const [newBasketName, setNewBasketName] = useState('')
+  const [creatingBasket, setCreatingBasket] = useState(false)
+  const [basketError, setBasketError] = useState('')
   const [roundupTema, setRoundupTema] = useState('')
   const [roundupBusy, setRoundupBusy] = useState(false)
   const [roundupError, setRoundupError] = useState('')
@@ -924,6 +970,7 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
     try {
       const res = await api.search(mapsQuery)
       setSearchResults(res.resultados)
+      setNewBasketName(mapsQuery.trim())
     } finally {
       setSearching(false)
     }
@@ -967,6 +1014,10 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
     c => !seedMinRating || c.rating >= Number(seedMinRating)
   )
 
+  const filteredSearchResults = searchResults.filter(
+    r => !mapsMinRating || r.rating >= Number(mapsMinRating)
+  )
+
   const saveAllVisibleSeedCandidates = async () => {
     setSavingAllSeed(true)
     try {
@@ -984,26 +1035,93 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
     }
   }
 
-  const toggleBasket = (placeId: string) => {
-    setBasketPlaceIds(previous => {
-      const next = new Set(previous)
-      if (next.has(placeId)) next.delete(placeId)
-      else next.add(placeId)
-      return next
-    })
+  const loadBaskets = useCallback(async () => {
+    try {
+      setBaskets(await api.listBaskets())
+    } catch (e) {
+      setBasketError(e instanceof Error ? e.message : String(e))
+    }
+  }, [])
+
+  useEffect(() => { loadBaskets() }, [loadBaskets])
+
+  const loadActiveBasket = useCallback(async (basketId: number) => {
+    try {
+      setActiveBasket(await api.getBasket(basketId))
+    } catch (e) {
+      setBasketError(e instanceof Error ? e.message : String(e))
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeBasketId == null) { setActiveBasket(null); return }
+    loadActiveBasket(activeBasketId)
+  }, [activeBasketId, loadActiveBasket])
+
+  const refreshActiveBasket = useCallback(() => {
+    if (activeBasketId != null) loadActiveBasket(activeBasketId)
+    loadBaskets()
+  }, [activeBasketId, loadActiveBasket, loadBaskets])
+
+  const createAndActivateBasket = async (name: string) => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    setCreatingBasket(true)
+    setBasketError('')
+    try {
+      const created = await api.createBasket(trimmed)
+      await loadBaskets()
+      setActiveBasketId(created.id)
+      setNewBasketName('')
+    } catch (e) {
+      setBasketError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setCreatingBasket(false)
+    }
   }
 
-  const basketPlaces = places.filter(p => basketPlaceIds.has(p.place_id))
+  const toggleActiveBasketPlace = async (placeId: string) => {
+    if (activeBasketId == null) return
+    const inBasket = activeBasket?.places.some(p => p.place_id === placeId)
+    try {
+      if (inBasket) await api.removePlaceFromBasket(activeBasketId, placeId)
+      else await api.addPlaceToBasket(activeBasketId, placeId)
+      refreshActiveBasket()
+    } catch (e) {
+      setBasketError(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const removeFromActiveBasket = async (placeId: string) => {
+    if (activeBasketId == null) return
+    try {
+      await api.removePlaceFromBasket(activeBasketId, placeId)
+      refreshActiveBasket()
+    } catch (e) {
+      setBasketError(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const deleteActiveBasket = async () => {
+    if (activeBasketId == null) return
+    try {
+      await api.deleteBasket(activeBasketId)
+      setActiveBasketId(null)
+      setActiveBasket(null)
+      loadBaskets()
+    } catch (e) {
+      setBasketError(e instanceof Error ? e.message : String(e))
+    }
+  }
 
   const generateRoundupArticle = async () => {
-    if (!roundupTema.trim() || basketPlaceIds.size < 2) return
+    if (!roundupTema.trim() || !activeBasket || activeBasket.places.length < 2) return
     setRoundupBusy(true)
     setRoundupError('')
     setRoundupResult(null)
     try {
-      const result = await api.generateRoundup(roundupTema.trim(), Array.from(basketPlaceIds))
+      const result = await api.generateRoundup(roundupTema.trim(), activeBasket.places.map(p => p.place_id))
       setRoundupResult(result)
-      setBasketPlaceIds(new Set())
       setRoundupTema('')
     } catch (e) {
       setRoundupError(e instanceof Error ? e.message : String(e))
@@ -1035,7 +1153,9 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
       activeFilter !== 'incomplete' ||
       !incompleteField ||
       p.incomplete_fields?.includes(incompleteField as 'contact' | 'location' | 'images' | 'food_type' | 'wordpress_link')
-    return matchesFilter && matchesQuery && matchesRating && matchesIncompleteField
+    const matchesBasket =
+      activeBasketId == null || !!activeBasket?.places.some(bp => bp.place_id === p.place_id)
+    return matchesFilter && matchesQuery && matchesRating && matchesIncompleteField && matchesBasket
   })
 
   const cityPlaces = selectedCity ? places.filter(p => cityOf(p) === selectedCity) : []
@@ -1076,7 +1196,7 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
           <MainNav
             active={activeSection}
             onSelect={key => { setActiveSection(key); setNavOpen(false) }}
-            basketCount={basketPlaceIds.size}
+            basketCount={activeBasket?.places.length ?? 0}
           />
         </aside>
 
@@ -1109,11 +1229,64 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
 
               {searchResults.length > 0 && (
                 <div>
-                  <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                    Resultados de búsqueda ({searchResults.length})
-                  </h2>
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                    <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      Resultados de búsqueda ({filteredSearchResults.length} de {searchResults.length})
+                    </h2>
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="maps-rating-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                        Puntuación mínima
+                      </label>
+                      <select
+                        id="maps-rating-filter"
+                        value={mapsMinRating}
+                        onChange={event => setMapsMinRating(event.target.value)}
+                        className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-700"
+                      >
+                        <option value="">Cualquier puntuación</option>
+                        <option value="4.5">4,5 o más</option>
+                        <option value="4">4 o más</option>
+                        <option value="3.5">3,5 o más</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 mb-3 flex flex-wrap items-center gap-2">
+                    <label htmlFor="maps-basket-select" className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                      🧺 Cesta
+                    </label>
+                    <select
+                      id="maps-basket-select"
+                      value={activeBasketId ?? ''}
+                      onChange={e => setActiveBasketId(e.target.value ? Number(e.target.value) : null)}
+                      className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-700"
+                    >
+                      <option value="">Sin cesta activa</option>
+                      {baskets.map(b => (
+                        <option key={b.id} value={b.id}>{b.name} ({b.place_count})</option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      value={newBasketName}
+                      onChange={e => setNewBasketName(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && createAndActivateBasket(newBasketName)}
+                      placeholder="Nombre de cesta nueva..."
+                      className="flex-1 min-w-[10rem] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-700"
+                    />
+                    <button
+                      onClick={() => createAndActivateBasket(newBasketName)}
+                      disabled={creatingBasket || !newBasketName.trim()}
+                      className="text-xs px-3 py-2 rounded-lg bg-green-700 hover:bg-green-800 text-white disabled:opacity-60 flex items-center gap-1 shrink-0"
+                    >
+                      {creatingBasket && <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                      Crear cesta
+                    </button>
+                    {basketError && <p className="text-xs text-red-600 dark:text-red-400 w-full">{basketError}</p>}
+                  </div>
+
                   <div className="space-y-2">
-                    {searchResults.map(r => (
+                    {filteredSearchResults.map(r => (
                       <SearchResultCard
                         key={r.place_id}
                         result={r}
@@ -1122,6 +1295,9 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
                           setSavedPlaceIds(previous => new Set(previous).add(placeId))
                           loadPlaces()
                         }}
+                        activeBasketId={activeBasketId}
+                        inActiveBasket={activeBasket?.places.some(p => p.place_id === r.place_id) ?? false}
+                        onBasketUpdated={refreshActiveBasket}
                       />
                     ))}
                   </div>
@@ -1208,6 +1384,28 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
                 )}
               </div>
 
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 flex items-center gap-3">
+                <label htmlFor="fichas-basket-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                  🧺 Cesta
+                </label>
+                <select
+                  id="fichas-basket-filter"
+                  value={activeBasketId ?? ''}
+                  onChange={e => setActiveBasketId(e.target.value ? Number(e.target.value) : null)}
+                  className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-700"
+                >
+                  <option value="">Todas las fichas</option>
+                  {baskets.map(b => (
+                    <option key={b.id} value={b.id}>{b.name} ({b.place_count})</option>
+                  ))}
+                </select>
+                {activeBasketId != null && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                    {filteredPlaces.length} resultados
+                  </span>
+                )}
+              </div>
+
               <div>
                 <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                   {activeFilter === 'all'
@@ -1235,8 +1433,8 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
                         key={p.place_id}
                         place={p}
                         onRefresh={loadPlaces}
-                        inBasket={basketPlaceIds.has(p.place_id)}
-                        onToggleBasket={toggleBasket}
+                        inBasket={activeBasket?.places.some(bp => bp.place_id === p.place_id) ?? false}
+                        onToggleBasket={activeBasketId != null ? toggleActiveBasketPlace : undefined}
                       />
                     ))}
                   </div>
@@ -1270,8 +1468,8 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
                         key={p.place_id}
                         place={p}
                         onRefresh={loadPlaces}
-                        inBasket={basketPlaceIds.has(p.place_id)}
-                        onToggleBasket={toggleBasket}
+                        inBasket={activeBasket?.places.some(bp => bp.place_id === p.place_id) ?? false}
+                        onToggleBasket={activeBasketId != null ? toggleActiveBasketPlace : undefined}
                       />
                     ))}
                   </div>
@@ -1373,63 +1571,99 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-1">
                 <h2 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Artículo de resumen</h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Añade fichas ya publicadas a la cesta desde "Fichas" o "Ciudades" (icono 🧺 en cada tarjeta),
-                  ponle un tema y genera un artículo que enlaza a todas — igual que el de los beach clubs de Alcúdia.
+                  Crea una cesta con nombre desde "Buscar en Maps" y ve añadiendo fichas ya publicadas
+                  desde ahí, "Fichas" o "Ciudades" (icono 🧺 en cada tarjeta). Elige la cesta aquí, ponle
+                  un tema y genera un artículo que enlaza a todas — igual que el de los beach clubs de Alcúdia.
                 </p>
               </div>
 
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Cesta ({basketPlaces.length})
-                </h3>
-                {basketPlaces.length === 0 ? (
+                <div className="flex items-center gap-2">
+                  <label htmlFor="articulos-basket-select" className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                    Cesta
+                  </label>
+                  <select
+                    id="articulos-basket-select"
+                    value={activeBasketId ?? ''}
+                    onChange={e => setActiveBasketId(e.target.value ? Number(e.target.value) : null)}
+                    className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-700"
+                  >
+                    <option value="">Elige una cesta...</option>
+                    {baskets.map(b => (
+                      <option key={b.id} value={b.id}>{b.name} ({b.place_count})</option>
+                    ))}
+                  </select>
+                  {activeBasketId != null && (
+                    <button
+                      onClick={deleteActiveBasket}
+                      title="Eliminar esta cesta (no borra las fichas)"
+                      className="shrink-0 w-9 h-9 rounded-lg text-gray-400 hover:text-white hover:bg-red-600 flex items-center justify-center"
+                    >
+                      🗑
+                    </button>
+                  )}
+                </div>
+                {basketError && <p className="text-xs text-red-600 dark:text-red-400">{basketError}</p>}
+
+                {activeBasketId == null ? (
                   <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">
-                    Todavía no has añadido ninguna ficha.
+                    Elige una cesta arriba o crea una nueva desde "Buscar en Maps".
                   </p>
                 ) : (
-                  <div className="space-y-1">
-                    {basketPlaces.map(p => (
-                      <div key={p.place_id} className="flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-900/40 rounded-lg px-3 py-2">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{p.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{p.city || p.municipality} · ★ {p.rating.toFixed(1)}</p>
-                        </div>
-                        <button
-                          onClick={() => toggleBasket(p.place_id)}
-                          aria-label={`Quitar ${p.name} de la cesta`}
-                          className="shrink-0 w-7 h-7 rounded-full text-gray-400 hover:text-white hover:bg-red-600 flex items-center justify-center"
-                        >
-                          ×
-                        </button>
+                  <>
+                    <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      {activeBasket?.name} ({activeBasket?.places.length ?? 0})
+                    </h3>
+                    {!activeBasket || activeBasket.places.length === 0 ? (
+                      <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">
+                        Todavía no has añadido ninguna ficha a esta cesta.
+                      </p>
+                    ) : (
+                      <div className="space-y-1">
+                        {activeBasket.places.map(p => (
+                          <div key={p.place_id} className="flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-900/40 rounded-lg px-3 py-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{p.name}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{p.city || p.municipality} · ★ {p.rating.toFixed(1)}</p>
+                            </div>
+                            <button
+                              onClick={() => removeFromActiveBasket(p.place_id)}
+                              aria-label={`Quitar ${p.name} de la cesta`}
+                              className="shrink-0 w-7 h-7 rounded-full text-gray-400 hover:text-white hover:bg-red-600 flex items-center justify-center"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    )}
 
-                <label htmlFor="roundup-tema" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Tema del artículo
-                </label>
-                <input
-                  id="roundup-tema"
-                  type="text"
-                  value={roundupTema}
-                  onChange={e => setRoundupTema(e.target.value)}
-                  placeholder='Ej. "restaurantes de Barcelona" o "restaurantes de paella en Valencia"'
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-700"
-                />
+                    <label htmlFor="roundup-tema" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Tema del artículo
+                    </label>
+                    <input
+                      id="roundup-tema"
+                      type="text"
+                      value={roundupTema}
+                      onChange={e => setRoundupTema(e.target.value)}
+                      placeholder='Ej. "restaurantes de Barcelona" o "restaurantes de paella en Valencia"'
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-700"
+                    />
 
-                <button
-                  onClick={generateRoundupArticle}
-                  disabled={roundupBusy || basketPlaces.length < 2 || !roundupTema.trim()}
-                  className="w-full min-h-11 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2"
-                >
-                  {roundupBusy && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                  {roundupBusy ? 'Generando y publicando...' : 'Generar y publicar artículo'}
-                </button>
-                {basketPlaces.length === 1 && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500">Añade al menos 2 fichas.</p>
+                    <button
+                      onClick={generateRoundupArticle}
+                      disabled={roundupBusy || (activeBasket?.places.length ?? 0) < 2 || !roundupTema.trim()}
+                      className="w-full min-h-11 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2"
+                    >
+                      {roundupBusy && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                      {roundupBusy ? 'Generando y publicando...' : 'Generar y publicar artículo'}
+                    </button>
+                    {(activeBasket?.places.length ?? 0) === 1 && (
+                      <p className="text-xs text-gray-400 dark:text-gray-500">Añade al menos 2 fichas.</p>
+                    )}
+                    {roundupError && <p className="text-sm text-red-600 dark:text-red-400">{roundupError}</p>}
+                  </>
                 )}
-                {roundupError && <p className="text-sm text-red-600 dark:text-red-400">{roundupError}</p>}
               </div>
 
               {roundupResult && (

@@ -179,6 +179,7 @@ def delete_place_completely(place_id: str) -> dict:
             "blog_article",
             "review",
             "review_text",
+            "basket_place",
         ):
             conn.execute(f"DELETE FROM {table} WHERE place_id = ?", (place_id,))
         conn.execute("DELETE FROM place WHERE place_id = ?", (place_id,))

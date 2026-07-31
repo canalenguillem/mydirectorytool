@@ -133,3 +133,27 @@ export interface RoundupResult {
   url: string
   post_id: number
 }
+
+export interface Basket {
+  id: number
+  name: string
+  created_at: number
+  place_count: number
+}
+
+export interface BasketPlace {
+  place_id: string
+  name: string
+  city?: string
+  municipality?: string
+  rating: number
+  publicado_en_wp: number
+  wp_post_id: number | null
+}
+
+export interface BasketDetail {
+  id: number
+  name: string
+  created_at: number
+  places: BasketPlace[]
+}

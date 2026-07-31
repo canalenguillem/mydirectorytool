@@ -26,7 +26,14 @@ import sqlalchemy as sa
 # Permite importar app.data.seed_locations al correr `alembic` desde
 # backend/ sin instalar el paquete `app` (mismo patrón que alembic/env.py).
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from app.data.seed_locations import SEED_LOCATIONS  # noqa: E402
+from app.data.seed_locations import SEED_CITIES_BY_COUNTRY, seed_locations_for  # noqa: E402
+
+# Backfill histórico: todas las ciudades semilla que este código conoce,
+# de todos los países, no solo el configurado para esta instalación
+# (init_db() sí se limita a DIRECTORY_COUNTRY_CODE, pero esta migración
+# reproduce el estado que tenía la base de datos cuando se creó, antes
+# de que existiera ese filtro).
+SEED_LOCATIONS = seed_locations_for(list(SEED_CITIES_BY_COUNTRY.keys()))
 
 
 # revision identifiers, used by Alembic.

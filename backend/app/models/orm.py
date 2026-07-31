@@ -354,3 +354,21 @@ class OpenAIUsage(Base):
         Integer, nullable=False, server_default=text("0")
     )
     response_id: Mapped[str | None] = mapped_column(Text)
+
+
+class Basket(Base):
+    __tablename__ = "basket"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class BasketPlace(Base):
+    __tablename__ = "basket_place"
+
+    basket_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("basket.id"), primary_key=True
+    )
+    place_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    added_at: Mapped[int] = mapped_column(Integer, nullable=False)

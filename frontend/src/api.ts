@@ -88,6 +88,34 @@ export const api = {
       body: JSON.stringify({ tema, place_ids: placeIds }),
     }),
 
+  listBaskets: () =>
+    req<import('./types').Basket[]>('/baskets'),
+
+  createBasket: (name: string) =>
+    req<import('./types').Basket>('/baskets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }),
+
+  getBasket: (basketId: number) =>
+    req<import('./types').BasketDetail>(`/baskets/${basketId}`),
+
+  addPlaceToBasket: (basketId: number, placeId: string) =>
+    req<import('./types').BasketDetail>(`/baskets/${basketId}/places`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ place_id: placeId }),
+    }),
+
+  removePlaceFromBasket: (basketId: number, placeId: string) =>
+    req<import('./types').BasketDetail>(`/baskets/${basketId}/places/${encodeURIComponent(placeId)}`, {
+      method: 'DELETE',
+    }),
+
+  deleteBasket: (basketId: number) =>
+    req<void>(`/baskets/${basketId}`, { method: 'DELETE' }),
+
   search: (query: string) =>
     req<{ resultados: import('./types').SearchResult[] }>(`/places/search?query=${encodeURIComponent(query)}`),
 

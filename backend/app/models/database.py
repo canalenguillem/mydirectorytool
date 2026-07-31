@@ -340,6 +340,24 @@ def init_db():
     ON google_places_usage(seed_location_id)
     """)
 
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS basket (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+    )
+    """)
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS basket_place (
+        basket_id INTEGER NOT NULL,
+        place_id TEXT NOT NULL,
+        added_at INTEGER NOT NULL,
+        PRIMARY KEY (basket_id, place_id),
+        FOREIGN KEY(basket_id) REFERENCES basket(id)
+    )
+    """)
+
     # Restricciones de integridad (26 de julio de 2026). El DELETE es
     # idempotente: solo borra algo la primera vez que se ejecuta contra
     # una base con duplicados históricos; en instalaciones ya limpias no
@@ -985,6 +1003,84 @@ def get_places_by_ids(place_ids: list[str]) -> list[dict]:
     conn.close()
     by_id = {row["place_id"]: dict(row) for row in rows}
     return [by_id[pid] for pid in place_ids if pid in by_id]
+
+
+def create_basket(name: str) -> dict:
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.execute(
+        "INSERT INTO basket (name, created_at) VALUES (?, strftime('%s', 'now'))",
+        (name,),
+    )
+    conn.commit()
+    basket_id = cur.lastrowid
+    conn.close()
+    return {"id": basket_id, "name": name}
+
+
+def list_baskets() -> list[dict]:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("""
+        SELECT b.id, b.name, b.created_at, COUNT(bp.place_id) AS place_count
+        FROM basket b
+        LEFT JOIN basket_place bp ON bp.basket_id = b.id
+        GROUP BY b.id
+        ORDER BY b.created_at DESC
+    """).fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def get_basket(basket_id: int) -> dict | None:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    basket = conn.execute(
+        "SELECT id, name, created_at FROM basket WHERE id = ?", (basket_id,)
+    ).fetchone()
+    if not basket:
+        conn.close()
+        return None
+    places = conn.execute("""
+        SELECT p.place_id, p.name, p.city, p.municipality, p.rating,
+               p.publicado_en_wp, p.wp_post_id
+        FROM basket_place bp
+        JOIN place p ON p.place_id = bp.place_id
+        WHERE bp.basket_id = ?
+        ORDER BY bp.added_at
+    """, (basket_id,)).fetchall()
+    conn.close()
+    result = dict(basket)
+    result["places"] = [dict(row) for row in places]
+    return result
+
+
+def add_place_to_basket(basket_id: int, place_id: str) -> None:
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute(
+        "INSERT OR IGNORE INTO basket_place (basket_id, place_id, added_at) "
+        "VALUES (?, ?, strftime('%s', 'now'))",
+        (basket_id, place_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def remove_place_from_basket(basket_id: int, place_id: str) -> None:
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute(
+        "DELETE FROM basket_place WHERE basket_id = ? AND place_id = ?",
+        (basket_id, place_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete_basket(basket_id: int) -> None:
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("DELETE FROM basket_place WHERE basket_id = ?", (basket_id,))
+    conn.execute("DELETE FROM basket WHERE id = ?", (basket_id,))
+    conn.commit()
+    conn.close()
 
 
 def get_article_data(place_id):
