@@ -180,13 +180,13 @@ def generar_articulo_blog(info: dict, idioma: str = "es"):
     title = generar_titulo_unico(info)
     angulo = seleccionar_angulo(info)
     prompt = f"""
-Eres un redactor profesional experto en SEO y redacción web. Escribe un artículo muy completo y extenso (mínimo **1200 palabras**) en {idioma} sobre el siguiente negocio gastronómico local.
+Eres un redactor profesional experto en SEO y redacción web. Escribe un artículo completo pero conciso (**entre 500 y 700 palabras en total**, sin contar la sección final de SEO) en {idioma} sobre el siguiente negocio gastronómico local. No lo alargues de relleno: cada sección de las de abajo debe resolverse en 2-4 frases, ve directo a lo concreto.
 
 Resuelve las principales intenciones de búsqueda teniendo en cuenta la población del restaurante
  el artículo debe resolver las principales intenciones de búsqueda nom "donde comer bien en ..."
 "los mejores restaurantes en ..."
 
-📝 El artículo debe incluir detalles ricos y variados, anécdotas, contexto histórico o cultural si es relevante, y descripciones sensoriales. Usa párrafos desarrollados y evita repeticiones.
+📝 El artículo debe incluir detalles concretos (platos, ambiente, trato) sacados de las reseñas reales, sin relleno genérico ni repeticiones. Prioriza la densidad de información sobre la extensión.
 
 🎭 Enfoque retórico de este artículo (síguelo para la apertura y el cierre; no lo menciones explícitamente ni lo nombres en el texto):
 {angulo['instruccion']}
