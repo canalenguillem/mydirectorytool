@@ -603,7 +603,7 @@ function SeedQueuePanel({ status, busy, error, onAction }: {
   status: SeedQueueStatus | null
   busy: boolean
   error: string
-  onAction: (action: 'start_es' | 'start_us' | 'pause' | 'resume' | 'retry') => void
+  onAction: (action: 'start' | 'pause' | 'resume' | 'retry') => void
 }) {
   if (!status) return null
   const remaining = status.pending + status.processing
@@ -646,11 +646,8 @@ function SeedQueuePanel({ status, busy, error, onAction }: {
       )}
 
       <div className="grid grid-cols-2 gap-2">
-        <button disabled={busy} onClick={() => onAction('start_es')} className="min-h-11 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold disabled:opacity-60">
-          Lanzar España (52)
-        </button>
-        <button disabled={busy} onClick={() => onAction('start_us')} className="min-h-11 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold disabled:opacity-60">
-          Lanzar EEUU (50)
+        <button disabled={busy} onClick={() => onAction('start')} className="col-span-2 min-h-11 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold disabled:opacity-60">
+          Lanzar siembra
         </button>
         {status.active ? (
           <button disabled={busy} onClick={() => onAction('pause')} className="min-h-11 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 text-sm font-semibold disabled:opacity-60">
@@ -870,12 +867,11 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
     }
   }
 
-  const seedQueueAction = async (action: 'start_es' | 'start_us' | 'pause' | 'resume' | 'retry') => {
+  const seedQueueAction = async (action: 'start' | 'pause' | 'resume' | 'retry') => {
     setSeedQueueBusy(true)
     setSeedQueueError('')
     try {
-      const result = action === 'start_es' ? await api.startSeedQueue('ES', 52)
-        : action === 'start_us' ? await api.startSeedQueue('US', 50)
+      const result = action === 'start' ? await api.startSeedQueue(200)
         : action === 'pause' ? await api.pauseSeedQueue()
         : action === 'resume' ? await api.resumeSeedQueue()
         : await api.retryFailedSeedQueue()

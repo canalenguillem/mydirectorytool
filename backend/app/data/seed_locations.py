@@ -1,9 +1,17 @@
 """Ciudades semilla para el pipeline de siembra masiva (ver seed_queue.py).
 
-Se insertan en `seed_location` con `tier='capital'` al arrancar
-(`init_db()`, vía `INSERT OR IGNORE` -- idempotente, mismo espíritu que el
-resto de `init_db()`). Las ciudades añadidas después a mano (ej. Manacor)
-usan `tier='manual'` y no viven aquí, se crean vía `POST /seed/locations`.
+Cada directorio (instalación de MyDirectoryTool) se centra en un país
+concreto, elegido al configurarlo -- ver `DIRECTORY_COUNTRY_CODE` en
+`init_db()` (database.py). Este fichero es una librería de datos
+compartida entre TODOS los directorios que puedan desplegarse con este
+mismo código (uno por país cuando toque), no una lista que se inserte
+entera en cada instalación: `init_db()` solo inserta, vía `INSERT OR
+IGNORE`, las ciudades del país configurado para *esa* instalación
+concreta. Un directorio de restaurantes en España no debe arrastrar 50
+ciudades de EEUU sin usar solo porque el código las conoce.
+
+Las ciudades añadidas después a mano (ej. Manacor) usan `tier='manual'` y
+no viven aquí, se crean vía `POST /seed/locations`.
 
 SPAIN_CAPITALS: las 50 capitales de provincia + Ceuta y Melilla. Lista fija
 y estable (división provincial oficial), no requiere verificación externa.
@@ -130,7 +138,20 @@ USA_MAIN_CITIES: list[tuple[str, str, str]] = [
     ("US", "Cheyenne", "Wyoming"),
 ]
 
-SEED_LOCATIONS: list[tuple[str, str, str, str]] = [
-    (country_code, name, region, "capital")
-    for country_code, name, region in SPAIN_CAPITALS + USA_MAIN_CITIES
-]
+# Un directorio nuevo en un país sin lista todavía (Corea del Sur, etc.)
+# simplemente añade su propia lista aquí y una entrada en este dict --
+# init_db() la recoge sola en cuanto DIRECTORY_COUNTRY_CODE la referencia.
+SEED_CITIES_BY_COUNTRY: dict[str, list[tuple[str, str, str]]] = {
+    "ES": SPAIN_CAPITALS,
+    "US": USA_MAIN_CITIES,
+}
+
+
+def seed_locations_for(country_codes: list[str]) -> list[tuple[str, str, str, str]]:
+    """Filas (country_code, name, region, tier) listas para insertar en
+    `seed_location`, limitadas a los países pedidos."""
+    rows = []
+    for requested_code in country_codes:
+        for country_code, name, region in SEED_CITIES_BY_COUNTRY.get(requested_code, []):
+            rows.append((country_code, name, region, "capital"))
+    return rows

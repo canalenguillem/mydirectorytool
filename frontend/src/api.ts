@@ -58,9 +58,9 @@ export const api = {
   seedQueueStatus: () =>
     req<import('./types').SeedQueueStatus>('/seed/status'),
 
-  startSeedQueue: (countryCode: string, limit: number, intervalSeconds = 45) =>
+  startSeedQueue: (limit: number, intervalSeconds = 45) =>
     req<import('./types').SeedQueueStatus>(
-      `/seed/start?country_code=${countryCode}&limit=${limit}&interval_seconds=${intervalSeconds}`,
+      `/seed/start?limit=${limit}&interval_seconds=${intervalSeconds}`,
       { method: 'POST' },
     ),
 

@@ -2,7 +2,7 @@ import sqlite3
 import hashlib
 import json
 import logging
-from app.data.seed_locations import SEED_LOCATIONS
+from app.data.seed_locations import seed_locations_for
 from app.services.google_places import buscar_lugares
 import os
 import time
@@ -296,13 +296,22 @@ def init_db():
         VALUES (1, 0, 300, NULL, strftime('%s', 'now'))
     """)
 
+    # Cada instalación se centra en el/los país(es) que le tocan -- no en
+    # todos los que este código conoce. Por defecto solo España; para un
+    # directorio en otro país (o varios) se configura DIRECTORY_COUNTRY_CODE
+    # (ej. "US" o "ES,US") antes del primer arranque.
+    directory_countries = [
+        code.strip().upper()
+        for code in os.environ.get("DIRECTORY_COUNTRY_CODE", "ES").split(",")
+        if code.strip()
+    ]
     c.executemany(
         """
         INSERT OR IGNORE INTO seed_location
             (country_code, name, region, tier, active, created_at)
         VALUES (?, ?, ?, ?, 1, strftime('%s', 'now'))
         """,
-        SEED_LOCATIONS,
+        seed_locations_for(directory_countries),
     )
 
     c.execute("""
