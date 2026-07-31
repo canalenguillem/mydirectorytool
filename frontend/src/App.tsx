@@ -773,6 +773,8 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
   const [selectedSearchId, setSelectedSearchId] = useState<number | null>(null)
   const [seedCandidates, setSeedCandidates] = useState<SeedCandidate[]>([])
   const [seedCandidatesLoading, setSeedCandidatesLoading] = useState(false)
+  const [seedMinRating, setSeedMinRating] = useState<string>('')
+  const [savingAllSeed, setSavingAllSeed] = useState(false)
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null)
 
   const loadPlaces = useCallback(async () => {
@@ -929,6 +931,27 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
       s.search_id === selectedSearchId ? { ...s, saved: s.saved + 1, pending: s.pending - 1 } : s
     ))
     loadPlaces()
+  }
+
+  const filteredSeedCandidates = seedCandidates.filter(
+    c => !seedMinRating || c.rating >= Number(seedMinRating)
+  )
+
+  const saveAllVisibleSeedCandidates = async () => {
+    setSavingAllSeed(true)
+    try {
+      for (const c of filteredSeedCandidates) {
+        if (c.saved) continue
+        try {
+          await api.savePlace(c.place_id)
+          markCandidateSaved(c.place_id)
+        } catch {
+          // seguimos con el resto aunque una falle
+        }
+      }
+    } finally {
+      setSavingAllSeed(false)
+    }
   }
 
   const cityOf = (p: Place) => (p.municipality || p.city || '').trim() || 'Sin ciudad'
@@ -1220,9 +1243,37 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
               <div className="flex-1 min-w-0">
                 <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                   {selectedSearchId
-                    ? `${seedCandidates.length} candidatos`
+                    ? `${filteredSeedCandidates.length} de ${seedCandidates.length} candidatos`
                     : 'Elige una ciudad de la lista'}
                 </h2>
+
+                {selectedSearchId && !seedCandidatesLoading && seedCandidates.length > 0 && (
+                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 mb-3 flex flex-wrap items-center gap-3">
+                    <label htmlFor="seed-rating-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                      Puntuación mínima
+                    </label>
+                    <select
+                      id="seed-rating-filter"
+                      value={seedMinRating}
+                      onChange={event => setSeedMinRating(event.target.value)}
+                      className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-700"
+                    >
+                      <option value="">Cualquier puntuación</option>
+                      <option value="4.5">4,5 o más</option>
+                      <option value="4">4 o más</option>
+                      <option value="3.5">3,5 o más</option>
+                    </select>
+                    <button
+                      onClick={saveAllVisibleSeedCandidates}
+                      disabled={savingAllSeed || filteredSeedCandidates.every(c => c.saved)}
+                      className="ml-auto min-h-9 px-4 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-semibold disabled:opacity-60 flex items-center gap-2"
+                    >
+                      {savingAllSeed && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                      Guardar todos ({filteredSeedCandidates.filter(c => !c.saved).length})
+                    </button>
+                  </div>
+                )}
+
                 {!selectedSearchId ? (
                   <div className="text-center py-12 text-gray-400 dark:text-gray-500">
                     <p className="text-4xl mb-2">🔎</p>
@@ -1234,7 +1285,7 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {seedCandidates.map(c => (
+                    {filteredSeedCandidates.map(c => (
                       <SearchResultCard key={c.place_id} result={c} saved={c.saved} onSaved={markCandidateSaved} />
                     ))}
                   </div>
