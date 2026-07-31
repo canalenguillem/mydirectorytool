@@ -487,6 +487,70 @@ def get_or_create_search_with_candidates(query: str, lugares: list[dict]) -> lis
     return get_or_create_search(query)
 
 
+def list_seed_searches(search_term: str | None = None) -> list[dict]:
+    """Lista las búsquedas generadas por la cola de siembra (seed_queue.py),
+    con cuántos candidatos descubrió cada una y cuántos ya están guardados
+    en `place`. La query sembrada siempre tiene la forma "<search_term> en
+    <ciudad>" (ver seed_queue._run_pipeline), así que se reconoce por LIKE
+    'restaurantes en %' salvo que se pida otro search_term explícito."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    pattern = f"{search_term} en %" if search_term else "% en %"
+    rows = conn.execute(
+        """
+        SELECT
+            s.id AS search_id,
+            s.query,
+            COUNT(sr.id) AS total,
+            SUM(CASE WHEN p.place_id IS NOT NULL THEN 1 ELSE 0 END) AS saved
+        FROM search s
+        JOIN search_result sr ON sr.search_id = s.id
+        LEFT JOIN place p ON p.place_id = sr.place_id
+        WHERE s.query LIKE ?
+        GROUP BY s.id, s.query
+        ORDER BY s.query
+        """,
+        (pattern,),
+    ).fetchall()
+    conn.close()
+    return [
+        {
+            "search_id": row["search_id"],
+            "query": row["query"],
+            "total": row["total"],
+            "saved": row["saved"] or 0,
+            "pending": row["total"] - (row["saved"] or 0),
+        }
+        for row in rows
+    ]
+
+
+def get_search_candidates(search_id: int) -> list[dict]:
+    """Candidatos de una búsqueda concreta (por id), con un flag `saved`
+    indicando si ya están en `place`. Reutilizado por el panel para revisar
+    y guardar uno a uno lo que descubrió la siembra."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """
+        SELECT
+            sr.name, sr.address, sr.place_id, sr.rating, sr.postal_code,
+            sr.phone, sr.website, sr.country, sr.country_code, sr.region,
+            sr.province, sr.municipality, sr.city, sr.district,
+            sr.latitude, sr.longitude, sr.email, sr.email_source,
+            sr.business_status,
+            CASE WHEN p.place_id IS NOT NULL THEN 1 ELSE 0 END AS saved
+        FROM search_result sr
+        LEFT JOIN place p ON p.place_id = sr.place_id
+        WHERE sr.search_id = ?
+        ORDER BY sr.rating DESC
+        """,
+        (search_id,),
+    ).fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
 def save_search_result(place_id: str):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row

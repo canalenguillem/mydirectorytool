@@ -73,6 +73,14 @@ export const api = {
   retryFailedSeedQueue: () =>
     req<import('./types').SeedQueueStatus>('/seed/retry-failed', { method: 'POST' }),
 
+  seedSearches: (searchTerm?: string) =>
+    req<{ searches: import('./types').SeedSearch[] }>(
+      `/seed/searches${searchTerm ? `?search_term=${encodeURIComponent(searchTerm)}` : ''}`,
+    ),
+
+  seedCandidates: (searchId: number) =>
+    req<{ candidates: import('./types').SeedCandidate[] }>(`/seed/searches/${searchId}/candidates`),
+
   search: (query: string) =>
     req<{ resultados: import('./types').SearchResult[] }>(`/places/search?query=${encodeURIComponent(query)}`),
 

@@ -115,3 +115,15 @@ export interface SeedQueueStatus {
   retried?: number
   search_term?: string
 }
+
+export interface SeedSearch {
+  search_id: number
+  query: string
+  total: number
+  saved: number
+  pending: number
+}
+
+export interface SeedCandidate extends SearchResult {
+  saved: boolean
+}

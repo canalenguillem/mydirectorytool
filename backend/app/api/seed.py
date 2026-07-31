@@ -3,7 +3,9 @@ from fastapi import APIRouter, Query
 
 from app.models.database import (
     add_seed_location,
+    get_search_candidates,
     list_seed_locations,
+    list_seed_searches,
     set_seed_location_active,
 )
 from app.services.seed_queue import (
@@ -62,3 +64,13 @@ def add_location(country_code: str, name: str, region: str | None = None):
 @router.patch("/locations/{location_id}")
 def toggle_location(location_id: int, active: bool):
     return set_seed_location_active(location_id, active)
+
+
+@router.get("/searches")
+def searches(search_term: str | None = None):
+    return {"searches": list_seed_searches(search_term)}
+
+
+@router.get("/searches/{search_id}/candidates")
+def candidates(search_id: int):
+    return {"candidates": get_search_candidates(search_id)}

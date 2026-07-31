@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { api } from './api'
-import type { Place, QueueStatus, SearchResult, SeedQueueStatus, UsageSummary } from './types'
+import type { Place, QueueStatus, SearchResult, SeedCandidate, SeedQueueStatus, SeedSearch, UsageSummary } from './types'
 
 type ActionStatus = { type: 'idle' | 'loading' | 'success' | 'error'; message?: string }
 
@@ -530,16 +530,17 @@ function QueuePanel({ status, busy, error, onAction, title, description, allLabe
   )
 }
 
-const NAV_ITEMS: Array<{ key: 'maps' | 'fichas' | 'ciudades' | 'automatizacion'; label: string; icon: string }> = [
+const NAV_ITEMS: Array<{ key: 'maps' | 'fichas' | 'ciudades' | 'descubiertos' | 'automatizacion'; label: string; icon: string }> = [
   { key: 'maps', label: 'Buscar en Maps', icon: '🗺️' },
   { key: 'fichas', label: 'Fichas', icon: '📋' },
   { key: 'ciudades', label: 'Ciudades', icon: '🏙️' },
+  { key: 'descubiertos', label: 'Descubiertos', icon: '🔎' },
   { key: 'automatizacion', label: 'Automatización', icon: '⚙️' },
 ]
 
 function MainNav({ active, onSelect }: {
-  active: 'maps' | 'fichas' | 'ciudades' | 'automatizacion'
-  onSelect: (key: 'maps' | 'fichas' | 'ciudades' | 'automatizacion') => void
+  active: 'maps' | 'fichas' | 'ciudades' | 'descubiertos' | 'automatizacion'
+  onSelect: (key: 'maps' | 'fichas' | 'ciudades' | 'descubiertos' | 'automatizacion') => void
 }) {
   return (
     <nav className="space-y-1">
@@ -742,7 +743,7 @@ function UsagePanel({ usage }: { usage: UsageSummary | null }) {
   )
 }
 
-type Section = 'maps' | 'fichas' | 'ciudades' | 'automatizacion'
+type Section = 'maps' | 'fichas' | 'ciudades' | 'descubiertos' | 'automatizacion'
 
 function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: string; onLogout: () => void; isDark: boolean; toggleTheme: () => void }) {
   const [activeSection, setActiveSection] = useState<Section>('fichas')
@@ -767,6 +768,11 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
   const [seedQueueStatus, setSeedQueueStatus] = useState<SeedQueueStatus | null>(null)
   const [seedQueueBusy, setSeedQueueBusy] = useState(false)
   const [seedQueueError, setSeedQueueError] = useState('')
+  const [seedSearches, setSeedSearches] = useState<SeedSearch[]>([])
+  const [seedSearchesLoading, setSeedSearchesLoading] = useState(false)
+  const [selectedSearchId, setSelectedSearchId] = useState<number | null>(null)
+  const [seedCandidates, setSeedCandidates] = useState<SeedCandidate[]>([])
+  const [seedCandidatesLoading, setSeedCandidatesLoading] = useState(false)
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null)
 
   const loadPlaces = useCallback(async () => {
@@ -889,6 +895,40 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
     } finally {
       setSearching(false)
     }
+  }
+
+  const loadSeedSearches = useCallback(async () => {
+    setSeedSearchesLoading(true)
+    try {
+      const res = await api.seedSearches('restaurantes')
+      setSeedSearches(res.searches)
+    } finally {
+      setSeedSearchesLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeSection === 'descubiertos') loadSeedSearches()
+  }, [activeSection, loadSeedSearches])
+
+  const openSeedSearch = async (searchId: number) => {
+    setSelectedSearchId(searchId)
+    setSeedCandidatesLoading(true)
+    setSeedCandidates([])
+    try {
+      const res = await api.seedCandidates(searchId)
+      setSeedCandidates(res.candidates)
+    } finally {
+      setSeedCandidatesLoading(false)
+    }
+  }
+
+  const markCandidateSaved = (placeId: string) => {
+    setSeedCandidates(previous => previous.map(c => c.place_id === placeId ? { ...c, saved: true } : c))
+    setSeedSearches(previous => previous.map(s =>
+      s.search_id === selectedSearchId ? { ...s, saved: s.saved + 1, pending: s.pending - 1 } : s
+    ))
+    loadPlaces()
   }
 
   const cityOf = (p: Place) => (p.municipality || p.city || '').trim() || 'Sin ciudad'
@@ -1136,6 +1176,66 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
                   <div className="space-y-2">
                     {cityPlaces.map(p => (
                       <PlaceCard key={p.place_id} place={p} onRefresh={loadPlaces} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {activeSection === 'descubiertos' && (
+            <section className="md:flex md:items-start md:gap-4">
+              <div className="md:w-64 md:shrink-0 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 mb-4 md:mb-0 md:sticky md:top-20 max-h-[70vh] overflow-y-auto">
+                <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 px-1">
+                  Descubiertos por la siembra
+                </h2>
+                {seedSearchesLoading ? (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 px-1">Cargando...</p>
+                ) : seedSearches.length === 0 ? (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 px-1">
+                    Todavía no hay resultados de la cola de siembra.
+                  </p>
+                ) : (
+                  <nav className="space-y-0.5">
+                    {seedSearches.map(s => (
+                      <button
+                        key={s.search_id}
+                        onClick={() => openSeedSearch(s.search_id)}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between transition-colors ${
+                          selectedSearchId === s.search_id
+                            ? 'bg-green-700 text-white font-semibold'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <span className="truncate">{s.query.replace(/^restaurantes en /i, '')}</span>
+                        <span className={`text-xs shrink-0 ml-2 ${selectedSearchId === s.search_id ? 'opacity-75' : 'text-gray-400'}`}>
+                          {s.pending > 0 ? `${s.pending} sin guardar` : `${s.saved}/${s.total}`}
+                        </span>
+                      </button>
+                    ))}
+                  </nav>
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  {selectedSearchId
+                    ? `${seedCandidates.length} candidatos`
+                    : 'Elige una ciudad de la lista'}
+                </h2>
+                {!selectedSearchId ? (
+                  <div className="text-center py-12 text-gray-400 dark:text-gray-500">
+                    <p className="text-4xl mb-2">🔎</p>
+                    <p className="text-sm">Selecciona una ciudad para revisar lo que descubrió la siembra</p>
+                  </div>
+                ) : seedCandidatesLoading ? (
+                  <div className="text-center py-12">
+                    <span className="w-8 h-8 border-4 border-green-700 border-t-transparent rounded-full animate-spin inline-block" />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {seedCandidates.map(c => (
+                      <SearchResultCard key={c.place_id} result={c} saved={c.saved} onSaved={markCandidateSaved} />
                     ))}
                   </div>
                 )}
