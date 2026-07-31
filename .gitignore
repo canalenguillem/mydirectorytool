@@ -35,3 +35,6 @@ places.db
 .vscode/
 *.swp
 notes2.txt
+
+# Claude Code local config (permission allowlist, etc.)
+.claude/
