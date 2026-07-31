@@ -88,6 +88,19 @@ export const api = {
       body: JSON.stringify({ tema, place_ids: placeIds }),
     }),
 
+  queueRoundup: (tema: string, placeIds: string[], basketId?: number | null, postId?: number) =>
+    req<import('./types').RoundupJob>('/roundups/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tema, place_ids: placeIds, basket_id: basketId ?? null, post_id: postId ?? null }),
+    }),
+
+  roundupQueueStatus: () =>
+    req<import('./types').RoundupQueueStatus>('/roundups/queue/status'),
+
+  roundupQueueJobs: (limit = 20) =>
+    req<{ jobs: import('./types').RoundupJob[] }>(`/roundups/queue/jobs?limit=${limit}`),
+
   listBaskets: () =>
     req<import('./types').Basket[]>('/baskets'),
 

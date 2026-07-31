@@ -8,6 +8,7 @@ from app.api import auth, baskets, places, blog, queue, repair_queue, roundups, 
 from app.models.database import init_db
 from app.services.publication_queue import start_worker
 from app.services.repair_queue import start_worker as start_repair_worker
+from app.services.roundup_queue import start_worker as start_roundup_worker
 from app.services.seed_queue import start_worker as start_seed_worker
 
 logging.basicConfig(
@@ -24,6 +25,7 @@ def startup():
     start_worker()
     start_repair_worker()
     start_seed_worker()
+    start_roundup_worker()
 
 
 @app.middleware("http")

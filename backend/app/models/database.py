@@ -27,6 +27,17 @@ LOCATION_COLUMNS = {
     "business_status": "TEXT",
 }
 
+# Una cesta usada para publicar un artículo de resumen queda marcada --
+# no se genera un segundo artículo desde la misma cesta (ver
+# roundup_queue._finish). Editar el contenido de la cesta después de
+# publicada no toca el artículo ya publicado, eso es trabajo futuro.
+BASKET_PUBLISH_COLUMNS = {
+    "published_post_id": "INTEGER",
+    "published_url": "TEXT",
+    "published_title": "TEXT",
+    "published_at": "INTEGER",
+}
+
 
 def _ensure_columns(cursor, table: str, columns: dict[str, str]):
     existing = {row[1] for row in cursor.execute(f"PRAGMA table_info({table})")}
@@ -347,6 +358,7 @@ def init_db():
         created_at INTEGER NOT NULL
     )
     """)
+    _ensure_columns(c, "basket", BASKET_PUBLISH_COLUMNS)
 
     c.execute("""
     CREATE TABLE IF NOT EXISTS basket_place (
@@ -355,6 +367,53 @@ def init_db():
         added_at INTEGER NOT NULL,
         PRIMARY KEY (basket_id, place_id),
         FOREIGN KEY(basket_id) REFERENCES basket(id)
+    )
+    """)
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS roundup_queue_control (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        active INTEGER NOT NULL DEFAULT 0,
+        interval_seconds INTEGER NOT NULL DEFAULT 15,
+        next_run_at INTEGER,
+        updated_at INTEGER NOT NULL
+    )
+    """)
+
+    c.execute("""
+        INSERT OR IGNORE INTO roundup_queue_control
+            (id, active, interval_seconds, next_run_at, updated_at)
+        VALUES (1, 0, 15, NULL, strftime('%s', 'now'))
+    """)
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS roundup_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tema TEXT NOT NULL,
+        post_id INTEGER,
+        basket_id INTEGER,
+        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+        status_detail TEXT,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        max_attempts INTEGER NOT NULL DEFAULT 3,
+        last_error TEXT,
+        result_post_id INTEGER,
+        result_url TEXT,
+        result_title TEXT,
+        created_at INTEGER NOT NULL,
+        started_at INTEGER,
+        finished_at INTEGER,
+        FOREIGN KEY(basket_id) REFERENCES basket(id)
+    )
+    """)
+    _ensure_columns(c, "roundup_queue", {"basket_id": "INTEGER"})
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS roundup_queue_place (
+        roundup_queue_id INTEGER NOT NULL,
+        place_id TEXT NOT NULL,
+        PRIMARY KEY (roundup_queue_id, place_id),
+        FOREIGN KEY(roundup_queue_id) REFERENCES roundup_queue(id)
     )
     """)
 
@@ -1021,7 +1080,8 @@ def list_baskets() -> list[dict]:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     rows = conn.execute("""
-        SELECT b.id, b.name, b.created_at, COUNT(bp.place_id) AS place_count
+        SELECT b.id, b.name, b.created_at, b.published_post_id, b.published_url,
+               b.published_title, b.published_at, COUNT(bp.place_id) AS place_count
         FROM basket b
         LEFT JOIN basket_place bp ON bp.basket_id = b.id
         GROUP BY b.id
@@ -1035,7 +1095,7 @@ def get_basket(basket_id: int) -> dict | None:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     basket = conn.execute(
-        "SELECT id, name, created_at FROM basket WHERE id = ?", (basket_id,)
+        "SELECT * FROM basket WHERE id = ?", (basket_id,)
     ).fetchone()
     if not basket:
         conn.close()
@@ -1081,6 +1141,90 @@ def delete_basket(basket_id: int) -> None:
     conn.execute("DELETE FROM basket WHERE id = ?", (basket_id,))
     conn.commit()
     conn.close()
+
+
+def has_active_roundup_job_for_basket(basket_id: int) -> bool:
+    """True si esa cesta ya tiene un trabajo pendiente o en curso -- evita
+    encolar un segundo artículo idéntico si alguien pulsa "Generar" dos
+    veces antes de que termine el primero."""
+    conn = sqlite3.connect(DB_PATH)
+    row = conn.execute(
+        "SELECT 1 FROM roundup_queue WHERE basket_id = ? AND status IN ('pending', 'processing') LIMIT 1",
+        (basket_id,),
+    ).fetchone()
+    conn.close()
+    return row is not None
+
+
+def create_roundup_job(
+    tema: str, place_ids: list[str], post_id: int | None = None, basket_id: int | None = None
+) -> dict:
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.execute(
+        """
+        INSERT INTO roundup_queue (tema, post_id, basket_id, status, created_at)
+        VALUES (?, ?, ?, 'pending', strftime('%s', 'now'))
+        """,
+        (tema, post_id, basket_id),
+    )
+    job_id = cur.lastrowid
+    conn.executemany(
+        "INSERT OR IGNORE INTO roundup_queue_place (roundup_queue_id, place_id) VALUES (?, ?)",
+        [(job_id, place_id) for place_id in place_ids],
+    )
+    conn.commit()
+    conn.close()
+    return {"id": job_id, "tema": tema, "post_id": post_id, "status": "pending"}
+
+
+def get_roundup_job(job_id: int) -> dict | None:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    job = conn.execute("SELECT * FROM roundup_queue WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return None
+    places = conn.execute(
+        """
+        SELECT p.place_id, p.name, p.publicado_en_wp, p.wp_post_id
+        FROM roundup_queue_place rqp
+        JOIN place p ON p.place_id = rqp.place_id
+        WHERE rqp.roundup_queue_id = ?
+        """,
+        (job_id,),
+    ).fetchall()
+    conn.close()
+    result = dict(job)
+    result["places"] = [dict(row) for row in places]
+    return result
+
+
+def list_roundup_jobs(limit: int = 20) -> list[dict]:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """
+        SELECT q.*,
+               COUNT(rqp.place_id) AS place_count,
+               SUM(CASE WHEN p.publicado_en_wp THEN 1 ELSE 0 END) AS published_count
+        FROM roundup_queue q
+        LEFT JOIN roundup_queue_place rqp ON rqp.roundup_queue_id = q.id
+        LEFT JOIN place p ON p.place_id = rqp.place_id
+        GROUP BY q.id
+        ORDER BY q.created_at DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    conn.close()
+    result = []
+    for row in rows:
+        job_dict = dict(row)
+        job_dict.pop("post_id", None)
+        job_dict["place_count"] = job_dict["place_count"] or 0
+        job_dict["published_count"] = job_dict["published_count"] or 0
+        result.append(job_dict)
+    return result
 
 
 def get_article_data(place_id):

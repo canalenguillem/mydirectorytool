@@ -139,6 +139,10 @@ export interface Basket {
   name: string
   created_at: number
   place_count: number
+  published_post_id?: number | null
+  published_url?: string | null
+  published_title?: string | null
+  published_at?: number | null
 }
 
 export interface BasketPlace {
@@ -156,4 +160,40 @@ export interface BasketDetail {
   name: string
   created_at: number
   places: BasketPlace[]
+  published_post_id?: number | null
+  published_url?: string | null
+  published_title?: string | null
+  published_at?: number | null
+}
+
+export type RoundupJobStatus = 'pending' | 'processing' | 'completed' | 'failed'
+
+export interface RoundupJob {
+  id: number
+  tema: string
+  basket_id?: number | null
+  status: RoundupJobStatus
+  status_detail?: string | null
+  attempts: number
+  max_attempts: number
+  last_error?: string | null
+  result_post_id?: number | null
+  result_url?: string | null
+  result_title?: string | null
+  created_at: number
+  started_at?: number | null
+  finished_at?: number | null
+  place_count: number
+  published_count: number
+}
+
+export interface RoundupQueueStatus {
+  active: boolean
+  interval_seconds: number
+  next_run_at?: number | null
+  pending: number
+  processing: number
+  completed: number
+  failed: number
+  current?: { id: number; tema: string; status_detail?: string | null; attempts: number } | null
 }

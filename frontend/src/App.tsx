@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { api } from './api'
-import type { Basket, BasketDetail, Place, QueueStatus, RoundupResult, SearchResult, SeedCandidate, SeedQueueStatus, SeedSearch, UsageSummary } from './types'
+import type { Basket, BasketDetail, Place, QueueStatus, RoundupJob, SearchResult, SeedCandidate, SeedQueueStatus, SeedSearch, UsageSummary } from './types'
 
 type ActionStatus = { type: 'idle' | 'loading' | 'success' | 'error'; message?: string }
 
@@ -851,7 +851,7 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
   const [roundupTema, setRoundupTema] = useState('')
   const [roundupBusy, setRoundupBusy] = useState(false)
   const [roundupError, setRoundupError] = useState('')
-  const [roundupResult, setRoundupResult] = useState<RoundupResult | null>(null)
+  const [roundupJobs, setRoundupJobs] = useState<RoundupJob[]>([])
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null)
 
   const loadPlaces = useCallback(async () => {
@@ -898,20 +898,31 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
     }
   }, [])
 
+  const loadRoundupJobs = useCallback(async () => {
+    try {
+      const res = await api.roundupQueueJobs()
+      setRoundupJobs(res.jobs)
+    } catch {
+      // No debe bloquear el resto del panel -- se reintenta en el siguiente poll.
+    }
+  }, [])
+
   useEffect(() => {
     loadQueue()
     loadRepairQueue()
     loadSeedQueue()
     loadUsage()
+    loadRoundupJobs()
     const timer = window.setInterval(() => {
       loadQueue()
       loadRepairQueue()
       loadSeedQueue()
       loadPlaces()
       loadUsage()
+      loadRoundupJobs()
     }, 10000)
     return () => window.clearInterval(timer)
-  }, [loadQueue, loadRepairQueue, loadSeedQueue, loadPlaces, loadUsage])
+  }, [loadQueue, loadRepairQueue, loadSeedQueue, loadPlaces, loadUsage, loadRoundupJobs])
 
   const queueAction = async (action: 'test' | 'all' | 'pause' | 'resume' | 'retry') => {
     setQueueBusy(true)
@@ -1114,15 +1125,20 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
     }
   }
 
+  const activeBasketPendingJob = activeBasketId != null
+    ? roundupJobs.find(j => j.basket_id === activeBasketId && (j.status === 'pending' || j.status === 'processing'))
+    : undefined
+
   const generateRoundupArticle = async () => {
     if (!roundupTema.trim() || !activeBasket || activeBasket.places.length < 2) return
+    if (activeBasket.published_post_id || activeBasketPendingJob) return
     setRoundupBusy(true)
     setRoundupError('')
-    setRoundupResult(null)
     try {
-      const result = await api.generateRoundup(roundupTema.trim(), activeBasket.places.map(p => p.place_id))
-      setRoundupResult(result)
+      await api.queueRoundup(roundupTema.trim(), activeBasket.places.map(p => p.place_id), activeBasket.id)
       setRoundupTema('')
+      loadRoundupJobs()
+      loadBaskets()
     } catch (e) {
       setRoundupError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -1263,7 +1279,7 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
                     >
                       <option value="">Sin cesta activa</option>
                       {baskets.map(b => (
-                        <option key={b.id} value={b.id}>{b.name} ({b.place_count})</option>
+                        <option key={b.id} value={b.id}>{b.name} ({b.place_count}){b.published_post_id ? " · Publicado" : ""}</option>
                       ))}
                     </select>
                     <input
@@ -1396,7 +1412,7 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
                 >
                   <option value="">Todas las fichas</option>
                   {baskets.map(b => (
-                    <option key={b.id} value={b.id}>{b.name} ({b.place_count})</option>
+                    <option key={b.id} value={b.id}>{b.name} ({b.place_count}){b.published_post_id ? " · Publicado" : ""}</option>
                   ))}
                 </select>
                 {activeBasketId != null && (
@@ -1590,7 +1606,7 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
                   >
                     <option value="">Elige una cesta...</option>
                     {baskets.map(b => (
-                      <option key={b.id} value={b.id}>{b.name} ({b.place_count})</option>
+                      <option key={b.id} value={b.id}>{b.name} ({b.place_count}){b.published_post_id ? " · Publicado" : ""}</option>
                     ))}
                   </select>
                   {activeBasketId != null && (
@@ -1638,41 +1654,113 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
                       </div>
                     )}
 
-                    <label htmlFor="roundup-tema" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Tema del artículo
-                    </label>
-                    <input
-                      id="roundup-tema"
-                      type="text"
-                      value={roundupTema}
-                      onChange={e => setRoundupTema(e.target.value)}
-                      placeholder='Ej. "restaurantes de Barcelona" o "restaurantes de paella en Valencia"'
-                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-700"
-                    />
+                    {activeBasket?.published_post_id ? (
+                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50 rounded-lg p-3 space-y-1">
+                        <p className="text-sm font-semibold text-green-900 dark:text-green-300">
+                          Esta cesta ya tiene un artículo publicado
+                        </p>
+                        <a
+                          href={activeBasket.published_url ?? undefined}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-700 dark:text-blue-400 underline break-all"
+                        >
+                          {activeBasket.published_title || activeBasket.published_url}
+                        </a>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Puedes seguir añadiendo o quitando fichas de la cesta, pero no genera un artículo
+                          nuevo -- crea otra cesta para eso. Editar el artículo ya publicado será posible más adelante.
+                        </p>
+                      </div>
+                    ) : activeBasketPendingJob ? (
+                      <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900/50 rounded-lg p-3 space-y-1">
+                        <p className="text-sm font-semibold text-yellow-900 dark:text-yellow-300">
+                          Esta cesta ya tiene un artículo en curso
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          "{activeBasketPendingJob.tema}" está {activeBasketPendingJob.status === 'processing' ? 'generándose' : 'en cola'}
+                          {' '}(mira "Artículos en cola" más abajo). Espera a que termine antes de lanzar otro desde aquí.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <label htmlFor="roundup-tema" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Tema del artículo
+                        </label>
+                        <input
+                          id="roundup-tema"
+                          type="text"
+                          value={roundupTema}
+                          onChange={e => setRoundupTema(e.target.value)}
+                          placeholder='Ej. "restaurantes de Barcelona" o "restaurantes de paella en Valencia"'
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-700"
+                        />
 
-                    <button
-                      onClick={generateRoundupArticle}
-                      disabled={roundupBusy || (activeBasket?.places.length ?? 0) < 2 || !roundupTema.trim()}
-                      className="w-full min-h-11 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2"
-                    >
-                      {roundupBusy && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                      {roundupBusy ? 'Generando y publicando...' : 'Generar y publicar artículo'}
-                    </button>
-                    {(activeBasket?.places.length ?? 0) === 1 && (
-                      <p className="text-xs text-gray-400 dark:text-gray-500">Añade al menos 2 fichas.</p>
+                        <button
+                          onClick={generateRoundupArticle}
+                          disabled={roundupBusy || (activeBasket?.places.length ?? 0) < 2 || !roundupTema.trim()}
+                          className="w-full min-h-11 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2"
+                        >
+                          {roundupBusy && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                          {roundupBusy ? 'Encolando...' : 'Generar y publicar artículo'}
+                        </button>
+                        {(activeBasket?.places.length ?? 0) === 1 && (
+                          <p className="text-xs text-gray-400 dark:text-gray-500">Añade al menos 2 fichas.</p>
+                        )}
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          Si alguna ficha todavía no está publicada, se publicará sola en segundo plano y el
+                          artículo se generará en cuanto termine -- puedes cerrar el navegador mientras tanto.
+                        </p>
+                        {roundupError && <p className="text-sm text-red-600 dark:text-red-400">{roundupError}</p>}
+                      </>
                     )}
-                    {roundupError && <p className="text-sm text-red-600 dark:text-red-400">{roundupError}</p>}
                   </>
                 )}
               </div>
 
-              {roundupResult && (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50 rounded-xl p-4 space-y-1">
-                  <p className="text-sm font-semibold text-green-900 dark:text-green-300">¡Publicado!</p>
-                  <p className="text-sm text-gray-800 dark:text-gray-200">{roundupResult.title}</p>
-                  <a href={roundupResult.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-700 dark:text-blue-400 underline break-all">
-                    {roundupResult.url}
-                  </a>
+              {roundupJobs.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-2">
+                  <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    Artículos en cola
+                  </h3>
+                  <div className="space-y-2">
+                    {roundupJobs.map(job => (
+                      <div key={job.id} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{job.tema}</p>
+                          <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
+                            job.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' :
+                            job.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' :
+                            job.status === 'processing' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300' :
+                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300'
+                          }`}>
+                            {job.status === 'completed' ? 'Publicado' :
+                              job.status === 'failed' ? 'Error' :
+                              job.status === 'processing' ? 'Generando...' : 'En cola'}
+                          </span>
+                        </div>
+                        {job.status === 'pending' && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Publicando fichas: {job.published_count}/{job.place_count}
+                            {job.status_detail ? ` · ${job.status_detail}` : ''}
+                          </p>
+                        )}
+                        {job.status === 'failed' && job.last_error && (
+                          <p className="text-xs text-red-600 dark:text-red-400 mt-1">{job.last_error}</p>
+                        )}
+                        {job.status === 'completed' && job.result_url && (
+                          <a
+                            href={job.result_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-700 dark:text-blue-400 underline break-all mt-1 block"
+                          >
+                            {job.result_title || job.result_url}
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </section>

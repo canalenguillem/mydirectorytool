@@ -9,7 +9,7 @@ import time
 import pytest
 
 from app.models import database
-from app.services import google_places_usage, publication_queue, repair_queue, seed_queue
+from app.services import google_places_usage, publication_queue, repair_queue, roundup_queue, seed_queue
 
 
 @pytest.fixture
@@ -22,6 +22,7 @@ def temp_db(tmp_path, monkeypatch):
     monkeypatch.setattr(repair_queue, "DB_PATH", db_path)
     monkeypatch.setattr(seed_queue, "DB_PATH", db_path)
     monkeypatch.setattr(google_places_usage, "DB_PATH", db_path)
+    monkeypatch.setattr(roundup_queue, "DB_PATH", db_path)
 
     database.init_db()
     return db_path

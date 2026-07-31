@@ -44,6 +44,45 @@ def enqueue_pending_places(limit: int) -> int:
     return len(rows)
 
 
+def enqueue_specific_places(place_ids: list[str]) -> int:
+    """Encola place_ids concretos (o los reintenta si ya habían fallado),
+    para flujos que dependen de que unos lugares puntuales queden
+    publicados -- p.ej. roundup_queue, que necesita que las fichas de su
+    cesta se publiquen antes de poder escribir el artículo. A diferencia
+    de enqueue_pending_places() (todo lo pendiente, hasta un límite,
+    ordenado por antigüedad), aquí se apunta a una lista concreta, sin
+    tocar el resto de la cola."""
+    if not place_ids:
+        return 0
+    now = int(time.time())
+    with _connect() as conn:
+        placeholders = ",".join("?" for _ in place_ids)
+        already_published = {
+            row["place_id"]
+            for row in conn.execute(
+                f"SELECT place_id FROM place WHERE place_id IN ({placeholders}) AND publicado_en_wp = 1",
+                place_ids,
+            ).fetchall()
+        }
+        targets = [place_id for place_id in place_ids if place_id not in already_published]
+        if not targets:
+            return 0
+        conn.executemany(
+            "INSERT OR IGNORE INTO publication_queue (place_id, status, created_at) VALUES (?, 'pending', ?)",
+            [(place_id, now) for place_id in targets],
+        )
+        target_placeholders = ",".join("?" for _ in targets)
+        conn.execute(
+            f"""
+            UPDATE publication_queue
+            SET status = 'pending', attempts = 0, last_error = NULL, started_at = NULL, finished_at = NULL
+            WHERE place_id IN ({target_placeholders}) AND status = 'failed'
+            """,
+            targets,
+        )
+    return len(targets)
+
+
 def start_queue(limit: int, interval_seconds: int = 300) -> dict:
     added = enqueue_pending_places(limit)
     now = int(time.time())

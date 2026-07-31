@@ -362,6 +362,10 @@ class Basket(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+    published_post_id: Mapped[int | None] = mapped_column(Integer)
+    published_url: Mapped[str | None] = mapped_column(Text)
+    published_title: Mapped[str | None] = mapped_column(Text)
+    published_at: Mapped[int | None] = mapped_column(Integer)
 
 
 class BasketPlace(Base):
@@ -372,3 +376,59 @@ class BasketPlace(Base):
     )
     place_id: Mapped[str] = mapped_column(Text, primary_key=True)
     added_at: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class RoundupQueueControl(Base):
+    __tablename__ = "roundup_queue_control"
+    __table_args__ = (CheckConstraint("id = 1", name="ck_roundup_queue_control_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    active: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    interval_seconds: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("15")
+    )
+    next_run_at: Mapped[int | None] = mapped_column(Integer)
+    updated_at: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class RoundupQueue(Base):
+    __tablename__ = "roundup_queue"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'processing', 'completed', 'failed')",
+            name="ck_roundup_queue_status",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tema: Mapped[str] = mapped_column(Text, nullable=False)
+    post_id: Mapped[int | None] = mapped_column(Integer)
+    basket_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("basket.id"))
+    status: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default=text("'pending'")
+    )
+    status_detail: Mapped[str | None] = mapped_column(Text)
+    attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    max_attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("3")
+    )
+    last_error: Mapped[str | None] = mapped_column(Text)
+    result_post_id: Mapped[int | None] = mapped_column(Integer)
+    result_url: Mapped[str | None] = mapped_column(Text)
+    result_title: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+    started_at: Mapped[int | None] = mapped_column(Integer)
+    finished_at: Mapped[int | None] = mapped_column(Integer)
+
+
+class RoundupQueuePlace(Base):
+    __tablename__ = "roundup_queue_place"
+
+    roundup_queue_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("roundup_queue.id"), primary_key=True
+    )
+    place_id: Mapped[str] = mapped_column(Text, primary_key=True)
