@@ -61,8 +61,8 @@ def valid_session(token: str | None) -> bool:
 def login(data: LoginRequest, response: Response):
     username, password, _ = _credentials()
     if not (
-        hmac.compare_digest(data.username, username)
-        and hmac.compare_digest(data.password, password)
+        hmac.compare_digest(data.username.encode(), username.encode())
+        and hmac.compare_digest(data.password.encode(), password.encode())
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
