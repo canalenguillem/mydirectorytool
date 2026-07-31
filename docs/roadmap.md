@@ -1,6 +1,6 @@
 # Hoja de ruta
 
-Última actualización: 26 de julio de 2026.
+Última actualización: 30 de julio de 2026.
 
 ## Fase 0: estabilizar el directorio gastronómico
 
@@ -100,6 +100,26 @@ Estado: primer punto iniciado el 26 de julio de 2026 (ver Fase 1 arriba).
 - Añadir selector de directorio en el panel.
 
 Resultado: una instalación puede gestionar varios dominios sin duplicar código.
+
+### Adelanto: siembra masiva por ciudad (30 de julio de 2026)
+
+Antes de que exista la entidad `directory`, ya hay una pieza de
+infraestructura pensada para ella: un pipeline que descubre los 20
+mejores negocios de cada ciudad semilla (capital de provincia en España,
+o una ciudad por estado en EEUU) contra Places API (New), con ranking por
+rating/reseñas, coste acotado (Details solo para los 20 ya filtrados, no
+para todos los candidatos descubiertos) y throttling reutilizando la
+misma arquitectura de cola que `publication_queue`/`repair_queue`. El
+sector buscado (restaurantes, peluquerías...) es un parámetro, no una
+tabla nueva — evita adelantar el alcance de `directory`/`business_type`
+antes de tener la capa de repositorios. Detalle completo en
+`docs/inventories/2026-07-30-seed-queue.md`.
+
+**Sin verificar todavía contra la API real de Google** (todo probado con
+mocks y bases de datos temporales) ni desplegado a producción — pendiente
+el rollout gradual documentado en el inventario (2-3 ciudades de prueba,
+revisión manual, confirmar SKU de facturación en Google Cloud Console)
+antes de lanzar las 102 ciudades semilla completas.
 
 ## Fase 4: asistente para nuevos directorios
 

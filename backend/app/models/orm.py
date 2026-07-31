@@ -249,6 +249,86 @@ class RepairQueue(Base):
     finished_at: Mapped[int | None] = mapped_column(Integer)
 
 
+class SeedLocation(Base):
+    __tablename__ = "seed_location"
+    __table_args__ = (
+        UniqueConstraint("country_code", "name", "region"),
+        CheckConstraint("tier IN ('capital', 'manual')", name="ck_seed_location_tier"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    country_code: Mapped[str] = mapped_column(Text, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    region: Mapped[str | None] = mapped_column(Text)
+    tier: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'manual'"))
+    active: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+    created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class SeedQueueControl(Base):
+    __tablename__ = "seed_queue_control"
+    __table_args__ = (CheckConstraint("id = 1", name="ck_seed_queue_control_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    active: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    interval_seconds: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("300")
+    )
+    next_run_at: Mapped[int | None] = mapped_column(Integer)
+    updated_at: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class SeedQueue(Base):
+    __tablename__ = "seed_queue"
+    __table_args__ = (UniqueConstraint("seed_location_id", "search_term"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    seed_location_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("seed_location.id"), nullable=False
+    )
+    search_term: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default=text("'pending'")
+    )
+    attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    max_attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("3")
+    )
+    last_error: Mapped[str | None] = mapped_column(Text)
+    places_found: Mapped[int | None] = mapped_column(Integer)
+    places_saved: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+    started_at: Mapped[int | None] = mapped_column(Integer)
+    finished_at: Mapped[int | None] = mapped_column(Integer)
+
+
+class GooglePlacesUsage(Base):
+    __tablename__ = "google_places_usage"
+    __table_args__ = (
+        Index("idx_google_places_usage_created_at", "created_at"),
+        Index("idx_google_places_usage_seed_location_id", "seed_location_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+    operation: Mapped[str] = mapped_column(Text, nullable=False)
+    endpoint_version: Mapped[str] = mapped_column(Text, nullable=False)
+    field_mask: Mapped[str | None] = mapped_column(Text)
+    query: Mapped[str | None] = mapped_column(Text)
+    seed_location_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("seed_location.id")
+    )
+    country_code: Mapped[str | None] = mapped_column(Text)
+    directory_search_term: Mapped[str | None] = mapped_column(Text)
+    result_count: Mapped[int | None] = mapped_column(Integer)
+    status: Mapped[str | None] = mapped_column(Text)
+    place_id: Mapped[str | None] = mapped_column(Text)
+
+
 class OpenAIUsage(Base):
     __tablename__ = "openai_usage"
     __table_args__ = (

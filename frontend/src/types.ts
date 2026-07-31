@@ -90,3 +90,28 @@ export interface UsageSummary {
   cached_tokens: number
   breakdown: UsageBreakdown[]
 }
+
+export interface SeedQueueError {
+  seed_location_id: number
+  name?: string
+  search_term: string
+  attempts: number
+  last_error: string
+}
+
+export interface SeedQueueStatus {
+  active: boolean
+  interval_seconds: number
+  next_run_at?: number
+  pending: number
+  processing: number
+  completed: number
+  failed: number
+  total: number
+  estimated_seconds: number
+  current?: { seed_location_id: number; name?: string; country_code?: string; search_term: string; attempts: number }
+  recent_errors: SeedQueueError[]
+  added?: number
+  retried?: number
+  search_term?: string
+}

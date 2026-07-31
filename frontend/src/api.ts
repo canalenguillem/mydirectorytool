@@ -55,6 +55,24 @@ export const api = {
   usageSummary: (days = 30) =>
     req<import('./types').UsageSummary>(`/usage/summary?days=${days}`),
 
+  seedQueueStatus: () =>
+    req<import('./types').SeedQueueStatus>('/seed/status'),
+
+  startSeedQueue: (countryCode: string, limit: number, intervalSeconds = 45) =>
+    req<import('./types').SeedQueueStatus>(
+      `/seed/start?country_code=${countryCode}&limit=${limit}&interval_seconds=${intervalSeconds}`,
+      { method: 'POST' },
+    ),
+
+  pauseSeedQueue: () =>
+    req<import('./types').SeedQueueStatus>('/seed/pause', { method: 'POST' }),
+
+  resumeSeedQueue: () =>
+    req<import('./types').SeedQueueStatus>('/seed/resume', { method: 'POST' }),
+
+  retryFailedSeedQueue: () =>
+    req<import('./types').SeedQueueStatus>('/seed/retry-failed', { method: 'POST' }),
+
   search: (query: string) =>
     req<{ resultados: import('./types').SearchResult[] }>(`/places/search?query=${encodeURIComponent(query)}`),
 

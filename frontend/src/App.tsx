@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { api } from './api'
-import type { Place, QueueStatus, SearchResult, UsageSummary } from './types'
+import type { Place, QueueStatus, SearchResult, SeedQueueStatus, UsageSummary } from './types'
 
 type ActionStatus = { type: 'idle' | 'loading' | 'success' | 'error'; message?: string }
 
@@ -530,6 +530,160 @@ function QueuePanel({ status, busy, error, onAction, title, description, allLabe
   )
 }
 
+const NAV_ITEMS: Array<{ key: 'maps' | 'fichas' | 'ciudades' | 'automatizacion'; label: string; icon: string }> = [
+  { key: 'maps', label: 'Buscar en Maps', icon: '🗺️' },
+  { key: 'fichas', label: 'Fichas', icon: '📋' },
+  { key: 'ciudades', label: 'Ciudades', icon: '🏙️' },
+  { key: 'automatizacion', label: 'Automatización', icon: '⚙️' },
+]
+
+function MainNav({ active, onSelect }: {
+  active: 'maps' | 'fichas' | 'ciudades' | 'automatizacion'
+  onSelect: (key: 'maps' | 'fichas' | 'ciudades' | 'automatizacion') => void
+}) {
+  return (
+    <nav className="space-y-1">
+      {NAV_ITEMS.map(item => (
+        <button
+          key={item.key}
+          onClick={() => onSelect(item.key)}
+          className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+            active === item.key
+              ? 'bg-green-700 text-white'
+              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          <span>{item.icon}</span>
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </nav>
+  )
+}
+
+function CityNav({ cities, selected, onSelect, total }: {
+  cities: [string, number][]
+  selected: string | null
+  onSelect: (city: string | null) => void
+  total: number
+}) {
+  return (
+    <nav className="space-y-0.5">
+      <button
+        onClick={() => onSelect(null)}
+        className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between transition-colors ${
+          !selected
+            ? 'bg-green-700 text-white font-semibold'
+            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+        }`}
+      >
+        <span>Todas las ciudades</span>
+        <span className="text-xs opacity-75">{total}</span>
+      </button>
+      {cities.map(([city, count]) => (
+        <button
+          key={city}
+          onClick={() => onSelect(city === selected ? null : city)}
+          className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between transition-colors ${
+            selected === city
+              ? 'bg-green-700 text-white font-semibold'
+              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          <span className="truncate">{city}</span>
+          <span className="text-xs opacity-75 shrink-0 ml-2">{count}</span>
+        </button>
+      ))}
+    </nav>
+  )
+}
+
+function SeedQueuePanel({ status, busy, error, onAction }: {
+  status: SeedQueueStatus | null
+  busy: boolean
+  error: string
+  onAction: (action: 'start_es' | 'start_us' | 'pause' | 'resume' | 'retry') => void
+}) {
+  if (!status) return null
+  const remaining = status.pending + status.processing
+  const nextRun = status.next_run_at
+    ? new Date(status.next_run_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : null
+
+  return (
+    <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Siembra masiva por ciudad</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Top 20 negocios por ciudad semilla (Places API New) · guarda en resultados de búsqueda, no publica solo
+          </p>
+        </div>
+        <span className={`text-xs px-2 py-1 rounded-full font-medium ${status.active ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>
+          {status.active ? 'Activa' : 'Pausada'}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2 text-center">
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-2"><div className="font-bold text-gray-900 dark:text-gray-100">{status.pending}</div><div className="text-[10px] text-gray-500 dark:text-gray-400">En cola</div></div>
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2"><div className="font-bold text-gray-900 dark:text-gray-100">{status.processing}</div><div className="text-[10px] text-gray-500 dark:text-gray-400">Procesando</div></div>
+        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2"><div className="font-bold text-gray-900 dark:text-gray-100">{status.completed}</div><div className="text-[10px] text-gray-500 dark:text-gray-400">Terminados</div></div>
+        <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-2"><div className="font-bold text-gray-900 dark:text-gray-100">{status.failed}</div><div className="text-[10px] text-gray-500 dark:text-gray-400">Errores</div></div>
+      </div>
+
+      {status.current && (
+        <p className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded-lg px-3 py-2">
+          Procesando: <strong>{status.current.name || status.current.seed_location_id}</strong>
+          {status.current.country_code && <> ({status.current.country_code})</>} · "{status.current.search_term}" · intento {status.current.attempts}/3
+        </p>
+      )}
+      {remaining > 0 && (
+        <p className="text-xs text-gray-600 dark:text-gray-400">
+          Tiempo estimado: <strong>{formatDuration(status.estimated_seconds)}</strong>
+          {nextRun && <> · Próxima ejecución: <strong>{nextRun}</strong></>}
+        </p>
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        <button disabled={busy} onClick={() => onAction('start_es')} className="min-h-11 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold disabled:opacity-60">
+          Lanzar España (52)
+        </button>
+        <button disabled={busy} onClick={() => onAction('start_us')} className="min-h-11 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold disabled:opacity-60">
+          Lanzar EEUU (50)
+        </button>
+        {status.active ? (
+          <button disabled={busy} onClick={() => onAction('pause')} className="min-h-11 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 text-sm font-semibold disabled:opacity-60">
+            Pausar
+          </button>
+        ) : remaining > 0 ? (
+          <button disabled={busy} onClick={() => onAction('resume')} className="min-h-11 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-semibold disabled:opacity-60">
+            Reanudar
+          </button>
+        ) : null}
+        {status.failed > 0 && (
+          <button disabled={busy} onClick={() => onAction('retry')} className="col-span-2 min-h-10 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-300 text-sm font-medium disabled:opacity-60">
+            Reintentar errores
+          </button>
+        )}
+      </div>
+      {busy && <p className="text-xs text-blue-700 dark:text-blue-400">Actualizando cola de siembra...</p>}
+      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {status.recent_errors.length > 0 && (
+        <details className="text-xs">
+          <summary className="text-red-700 dark:text-red-400 cursor-pointer">Ver errores recientes</summary>
+          <div className="mt-2 space-y-2">
+            {status.recent_errors.map((item, idx) => (
+              <div key={idx} className="bg-red-50 dark:bg-red-900/30 text-gray-900 dark:text-gray-100 rounded p-2">
+                <strong>{item.name || item.seed_location_id}</strong> ("{item.search_term}"): {item.last_error}
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+    </section>
+  )
+}
+
 const operationLabels: Record<string, string> = {
   article_generation: 'Artículos',
   excerpt_generation: 'Extractos',
@@ -588,8 +742,13 @@ function UsagePanel({ usage }: { usage: UsageSummary | null }) {
   )
 }
 
+type Section = 'maps' | 'fichas' | 'ciudades' | 'automatizacion'
+
 function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: string; onLogout: () => void; isDark: boolean; toggleTheme: () => void }) {
-  const [query, setQuery] = useState('')
+  const [activeSection, setActiveSection] = useState<Section>('fichas')
+  const [navOpen, setNavOpen] = useState(false)
+  const [mapsQuery, setMapsQuery] = useState('')
+  const [fichasQuery, setFichasQuery] = useState('')
   const [searching, setSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [places, setPlaces] = useState<Place[]>([])
@@ -597,6 +756,7 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
   const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'published' | 'incomplete'>('all')
   const [maximumRating, setMaximumRating] = useState<string>('')
   const [incompleteField, setIncompleteField] = useState<string>('')
+  const [selectedCity, setSelectedCity] = useState<string | null>(null)
   const [savedPlaceIds, setSavedPlaceIds] = useState<Set<string>>(new Set())
   const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null)
   const [queueBusy, setQueueBusy] = useState(false)
@@ -604,6 +764,9 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
   const [repairQueueStatus, setRepairQueueStatus] = useState<QueueStatus | null>(null)
   const [repairQueueBusy, setRepairQueueBusy] = useState(false)
   const [repairQueueError, setRepairQueueError] = useState('')
+  const [seedQueueStatus, setSeedQueueStatus] = useState<SeedQueueStatus | null>(null)
+  const [seedQueueBusy, setSeedQueueBusy] = useState(false)
+  const [seedQueueError, setSeedQueueError] = useState('')
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null)
 
   const loadPlaces = useCallback(async () => {
@@ -634,6 +797,14 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
     }
   }, [])
 
+  const loadSeedQueue = useCallback(async () => {
+    try {
+      setSeedQueueStatus(await api.seedQueueStatus())
+    } catch (e) {
+      setSeedQueueError(e instanceof Error ? e.message : String(e))
+    }
+  }, [])
+
   const loadUsage = useCallback(async () => {
     try {
       setUsageSummary(await api.usageSummary(30))
@@ -645,15 +816,17 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
   useEffect(() => {
     loadQueue()
     loadRepairQueue()
+    loadSeedQueue()
     loadUsage()
     const timer = window.setInterval(() => {
       loadQueue()
       loadRepairQueue()
+      loadSeedQueue()
       loadPlaces()
       loadUsage()
     }, 10000)
     return () => window.clearInterval(timer)
-  }, [loadQueue, loadRepairQueue, loadPlaces, loadUsage])
+  }, [loadQueue, loadRepairQueue, loadSeedQueue, loadPlaces, loadUsage])
 
   const queueAction = async (action: 'test' | 'all' | 'pause' | 'resume' | 'retry') => {
     setQueueBusy(true)
@@ -689,17 +862,45 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
     }
   }
 
+  const seedQueueAction = async (action: 'start_es' | 'start_us' | 'pause' | 'resume' | 'retry') => {
+    setSeedQueueBusy(true)
+    setSeedQueueError('')
+    try {
+      const result = action === 'start_es' ? await api.startSeedQueue('ES', 52)
+        : action === 'start_us' ? await api.startSeedQueue('US', 50)
+        : action === 'pause' ? await api.pauseSeedQueue()
+        : action === 'resume' ? await api.resumeSeedQueue()
+        : await api.retryFailedSeedQueue()
+      setSeedQueueStatus(result)
+    } catch (e) {
+      setSeedQueueError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSeedQueueBusy(false)
+    }
+  }
+
   const handleGoogleSearch = async () => {
-    if (!query.trim()) return
+    if (!mapsQuery.trim()) return
     setSearching(true)
     setSearchResults([])
     try {
-      const res = await api.search(query)
+      const res = await api.search(mapsQuery)
       setSearchResults(res.resultados)
     } finally {
       setSearching(false)
     }
   }
+
+  const cityOf = (p: Place) => (p.municipality || p.city || '').trim() || 'Sin ciudad'
+
+  const cityCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const p of places) {
+      const city = cityOf(p)
+      counts.set(city, (counts.get(city) ?? 0) + 1)
+    }
+    return Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0], 'es'))
+  }, [places])
 
   const filteredPlaces = places.filter(p => {
     const matchesFilter =
@@ -707,7 +908,7 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
       activeFilter === 'pending' ? !p.publicado_en_wp :
       activeFilter === 'published' ? !!p.publicado_en_wp :
       !!p.is_incomplete
-    const matchesQuery = !query.trim() || p.name.toLowerCase().includes(query.toLowerCase())
+    const matchesQuery = !fichasQuery.trim() || p.name.toLowerCase().includes(fichasQuery.toLowerCase())
     const matchesRating = !maximumRating || p.rating < Number(maximumRating)
     const matchesIncompleteField =
       activeFilter !== 'incomplete' ||
@@ -715,6 +916,8 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
       p.incomplete_fields?.includes(incompleteField as 'contact' | 'location' | 'images' | 'food_type' | 'wordpress_link')
     return matchesFilter && matchesQuery && matchesRating && matchesIncompleteField
   })
+
+  const cityPlaces = selectedCity ? places.filter(p => cityOf(p) === selectedCity) : []
 
   const publishedCount = places.filter(p => p.publicado_en_wp).length
   const pendingCount = places.filter(p => !p.publicado_en_wp).length
@@ -725,9 +928,18 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
       {/* Header */}
       <header className="bg-green-900 text-white px-4 py-5 sticky top-0 z-10 shadow-lg">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-bold">🗺️ AI Maps Manager</h1>
-            <p className="text-green-300 text-xs mt-0.5">Gestor de restaurantes → dondecomerbien.com</p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setNavOpen(open => !open)}
+              className="md:hidden text-lg bg-green-800 hover:bg-green-700 rounded-lg w-9 h-9 flex items-center justify-center shrink-0"
+              aria-label="Abrir menú"
+            >
+              ☰
+            </button>
+            <div>
+              <h1 className="text-xl font-bold">🗺️ AI Maps Manager</h1>
+              <p className="text-green-300 text-xs mt-0.5">Gestor de restaurantes → dondecomerbien.com</p>
+            </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <ThemeToggle isDark={isDark} onToggle={toggleTheme} className="hover:bg-green-800" />
@@ -736,162 +948,222 @@ function Dashboard({ username, onLogout, isDark, toggleTheme }: { username: stri
             </button>
           </div>
         </div>
-
-        {/* Search bar */}
-        <div className="mt-3 flex gap-2">
-          <input
-            type="text"
-            value={query}
-            onChange={e => { setQuery(e.target.value); setSearchResults([]) }}
-            onKeyDown={e => e.key === 'Escape' && setQuery('')}
-            placeholder="Filtrar lugares guardados..."
-            className="flex-1 rounded-lg px-4 py-2.5 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-          />
-          <button
-            onClick={handleGoogleSearch}
-            disabled={searching || !query.trim()}
-            title="Buscar en Google Maps"
-            className="bg-green-600 hover:bg-green-500 px-3 py-2.5 rounded-lg text-sm font-medium disabled:opacity-60 flex items-center gap-1 shrink-0"
-          >
-            {searching
-              ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              : '+ Maps'}
-          </button>
-        </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-        {/* Search results */}
-        {searchResults.length > 0 && (
-          <section>
-            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-              Resultados de búsqueda ({searchResults.length})
-            </h2>
-            <div className="space-y-2">
-              {searchResults.map(r => (
-                <SearchResultCard
-                  key={r.place_id}
-                  result={r}
-                  saved={savedPlaceIds.has(r.place_id)}
-                  onSaved={placeId => {
-                    setSavedPlaceIds(previous => new Set(previous).add(placeId))
-                    loadPlaces()
-                  }}
+      <div className="max-w-6xl mx-auto px-4 py-4 md:flex md:items-start md:gap-4">
+        <aside className={`${navOpen ? 'block' : 'hidden'} md:block md:w-52 md:shrink-0 md:sticky md:top-20 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-2 mb-4 md:mb-0`}>
+          <MainNav active={activeSection} onSelect={key => { setActiveSection(key); setNavOpen(false) }} />
+        </aside>
+
+        <main className="flex-1 min-w-0 space-y-4">
+          {activeSection === 'maps' && (
+            <section className="space-y-4">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-1">
+                <h2 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Nueva búsqueda en Google Maps</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Ej. "restaurantes en Palma de Mallorca"</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={mapsQuery}
+                    onChange={e => setMapsQuery(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleGoogleSearch()}
+                    placeholder="Qué y dónde buscar..."
+                    className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+                  />
+                  <button
+                    onClick={handleGoogleSearch}
+                    disabled={searching || !mapsQuery.trim()}
+                    className="bg-green-700 hover:bg-green-800 text-white px-4 py-2.5 rounded-lg text-sm font-medium disabled:opacity-60 flex items-center gap-1 shrink-0"
+                  >
+                    {searching
+                      ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      : 'Buscar'}
+                  </button>
+                </div>
+              </div>
+
+              {searchResults.length > 0 && (
+                <div>
+                  <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                    Resultados de búsqueda ({searchResults.length})
+                  </h2>
+                  <div className="space-y-2">
+                    {searchResults.map(r => (
+                      <SearchResultCard
+                        key={r.place_id}
+                        result={r}
+                        saved={savedPlaceIds.has(r.place_id)}
+                        onSaved={placeId => {
+                          setSavedPlaceIds(previous => new Set(previous).add(placeId))
+                          loadPlaces()
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          {activeSection === 'fichas' && (
+            <section className="space-y-4">
+              {/* Stats */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { label: 'Total', count: places.length, key: 'all' as const, color: 'bg-white dark:bg-gray-800' },
+                  { label: 'Pendientes', count: pendingCount, key: 'pending' as const, color: 'bg-yellow-50 dark:bg-yellow-900/20' },
+                  { label: 'Publicados', count: publishedCount, key: 'published' as const, color: 'bg-green-50 dark:bg-green-900/20' },
+                  { label: 'Incompletos', count: incompleteCount, key: 'incomplete' as const, color: 'bg-red-50 dark:bg-red-900/20' },
+                ].map(({ label, count, key, color }) => (
+                  <button
+                    key={key}
+                    onClick={() => setActiveFilter(key)}
+                    className={`${color} rounded-xl p-3 text-center shadow-sm border-2 transition-all ${activeFilter === key ? 'border-green-600' : 'border-transparent'}`}
+                  >
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{count}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3">
+                <input
+                  type="text"
+                  value={fichasQuery}
+                  onChange={e => setFichasQuery(e.target.value)}
+                  placeholder="Buscar por nombre..."
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-700"
                 />
-              ))}
-            </div>
-          </section>
-        )}
+              </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {[
-            { label: 'Total', count: places.length, key: 'all' as const, color: 'bg-white dark:bg-gray-800' },
-            { label: 'Pendientes', count: pendingCount, key: 'pending' as const, color: 'bg-yellow-50 dark:bg-yellow-900/20' },
-            { label: 'Publicados', count: publishedCount, key: 'published' as const, color: 'bg-green-50 dark:bg-green-900/20' },
-            { label: 'Incompletos', count: incompleteCount, key: 'incomplete' as const, color: 'bg-red-50 dark:bg-red-900/20' },
-          ].map(({ label, count, key, color }) => (
-            <button
-              key={key}
-              onClick={() => setActiveFilter(key)}
-              className={`${color} rounded-xl p-3 text-center shadow-sm border-2 transition-all ${activeFilter === key ? 'border-green-600' : 'border-transparent'}`}
-            >
-              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{count}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
-            </button>
-          ))}
-        </div>
+              {activeFilter === 'incomplete' && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-red-100 dark:border-red-900/50 p-3 flex items-center gap-3">
+                  <label htmlFor="incomplete-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                    Falta
+                  </label>
+                  <select
+                    id="incomplete-filter"
+                    value={incompleteField}
+                    onChange={event => setIncompleteField(event.target.value)}
+                    className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-600"
+                  >
+                    <option value="">Cualquier dato</option>
+                    <option value="contact">Contacto</option>
+                    <option value="location">Ubicación completa</option>
+                    <option value="images">Imágenes</option>
+                    <option value="food_type">Tipo de comida</option>
+                    <option value="wordpress_link">Artículo en WordPress</option>
+                  </select>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                    {filteredPlaces.length} resultados
+                  </span>
+                </div>
+              )}
 
-        {activeFilter === 'incomplete' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-red-100 dark:border-red-900/50 p-3 flex items-center gap-3">
-            <label htmlFor="incomplete-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-              Falta
-            </label>
-            <select
-              id="incomplete-filter"
-              value={incompleteField}
-              onChange={event => setIncompleteField(event.target.value)}
-              className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-600"
-            >
-              <option value="">Cualquier dato</option>
-              <option value="contact">Contacto</option>
-              <option value="location">Ubicación completa</option>
-              <option value="images">Imágenes</option>
-              <option value="food_type">Tipo de comida</option>
-              <option value="wordpress_link">Artículo en WordPress</option>
-            </select>
-            <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-              {filteredPlaces.length} resultados
-            </span>
-          </div>
-        )}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 flex items-center gap-3">
+                <label htmlFor="rating-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                  Puntuación
+                </label>
+                <select
+                  id="rating-filter"
+                  value={maximumRating}
+                  onChange={event => setMaximumRating(event.target.value)}
+                  className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-700"
+                >
+                  <option value="">Cualquier puntuación</option>
+                  <option value="4.5">Menos de 4,5</option>
+                  <option value="4">Menos de 4</option>
+                  <option value="3.5">Menos de 3,5</option>
+                  <option value="3">Menos de 3</option>
+                </select>
+                {maximumRating && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                    {filteredPlaces.length} resultados
+                  </span>
+                )}
+              </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 flex items-center gap-3">
-          <label htmlFor="rating-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-            Puntuación
-          </label>
-          <select
-            id="rating-filter"
-            value={maximumRating}
-            onChange={event => setMaximumRating(event.target.value)}
-            className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-700"
-          >
-            <option value="">Cualquier puntuación</option>
-            <option value="4.5">Menos de 4,5</option>
-            <option value="4">Menos de 4</option>
-            <option value="3.5">Menos de 3,5</option>
-            <option value="3">Menos de 3</option>
-          </select>
-          {maximumRating && (
-            <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-              {filteredPlaces.length} resultados
-            </span>
+              <div>
+                <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  {activeFilter === 'all'
+                    ? 'Todos los lugares'
+                    : activeFilter === 'pending'
+                      ? 'Pendientes de publicar'
+                      : activeFilter === 'published'
+                        ? 'Publicados'
+                        : 'Datos incompletos'}
+                  {' '}({filteredPlaces.length})
+                </h2>
+                {loadingPlaces ? (
+                  <div className="text-center py-12">
+                    <span className="w-8 h-8 border-4 border-green-700 border-t-transparent rounded-full animate-spin inline-block" />
+                  </div>
+                ) : filteredPlaces.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400 dark:text-gray-500">
+                    <p className="text-4xl mb-2">🍽️</p>
+                    <p className="text-sm">No hay lugares guardados</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredPlaces.map(p => (
+                      <PlaceCard key={p.place_id} place={p} onRefresh={loadPlaces} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
           )}
-        </div>
 
-        <QueuePanel status={queueStatus} busy={queueBusy} error={queueError} onAction={queueAction} />
+          {activeSection === 'ciudades' && (
+            <section className="md:flex md:items-start md:gap-4">
+              <div className="md:w-56 md:shrink-0 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 mb-4 md:mb-0 md:sticky md:top-20 max-h-[70vh] overflow-y-auto">
+                <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 px-1">
+                  Ciudades
+                </h2>
+                <CityNav cities={cityCounts} selected={selectedCity} onSelect={setSelectedCity} total={places.length} />
+              </div>
 
-        <QueuePanel
-          status={repairQueueStatus}
-          busy={repairQueueBusy}
-          error={repairQueueError}
-          onAction={repairQueueAction}
-          title="Reparación automática"
-          description="Una ficha incompleta cada 5 minutos · máximo 3 intentos"
-          allLabel="Reparar todas las fichas incompletas"
-        />
-
-        <UsagePanel usage={usageSummary} />
-
-        {/* Places list */}
-        <section>
-          <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-            {activeFilter === 'all'
-              ? 'Todos los lugares'
-              : activeFilter === 'pending'
-                ? 'Pendientes de publicar'
-                : activeFilter === 'published'
-                  ? 'Publicados'
-                  : 'Datos incompletos'}
-          </h2>
-          {loadingPlaces ? (
-            <div className="text-center py-12">
-              <span className="w-8 h-8 border-4 border-green-700 border-t-transparent rounded-full animate-spin inline-block" />
-            </div>
-          ) : filteredPlaces.length === 0 ? (
-            <div className="text-center py-12 text-gray-400 dark:text-gray-500">
-              <p className="text-4xl mb-2">🍽️</p>
-              <p className="text-sm">No hay lugares guardados</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredPlaces.map(p => (
-                <PlaceCard key={p.place_id} place={p} onRefresh={loadPlaces} />
-              ))}
-            </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  {selectedCity ? `${selectedCity} (${cityPlaces.length})` : 'Elige una ciudad de la lista'}
+                </h2>
+                {!selectedCity ? (
+                  <div className="text-center py-12 text-gray-400 dark:text-gray-500">
+                    <p className="text-4xl mb-2">🏙️</p>
+                    <p className="text-sm">Selecciona una ciudad para ver sus restaurantes</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {cityPlaces.map(p => (
+                      <PlaceCard key={p.place_id} place={p} onRefresh={loadPlaces} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
           )}
-        </section>
-      </main>
+
+          {activeSection === 'automatizacion' && (
+            <section className="space-y-4">
+              <QueuePanel status={queueStatus} busy={queueBusy} error={queueError} onAction={queueAction} />
+
+              <QueuePanel
+                status={repairQueueStatus}
+                busy={repairQueueBusy}
+                error={repairQueueError}
+                onAction={repairQueueAction}
+                title="Reparación automática"
+                description="Una ficha incompleta cada 5 minutos · máximo 3 intentos"
+                allLabel="Reparar todas las fichas incompletas"
+              />
+
+              <SeedQueuePanel status={seedQueueStatus} busy={seedQueueBusy} error={seedQueueError} onAction={seedQueueAction} />
+
+              <UsagePanel usage={usageSummary} />
+            </section>
+          )}
+        </main>
+      </div>
     </div>
   )
 }

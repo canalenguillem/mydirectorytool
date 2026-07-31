@@ -2,6 +2,7 @@ import sqlite3
 import hashlib
 import json
 import logging
+from app.data.seed_locations import SEED_LOCATIONS
 from app.services.google_places import buscar_lugares
 import os
 import time
@@ -245,6 +246,91 @@ def init_db():
         VALUES (1, 0, 300, NULL, strftime('%s', 'now'))
     """)
 
+    # Siembra masiva por ciudad (30 de julio de 2026). Ver
+    # docs/inventories/2026-07-30-seed-queue.md.
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS seed_location (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        country_code TEXT NOT NULL,
+        name TEXT NOT NULL,
+        region TEXT,
+        tier TEXT NOT NULL DEFAULT 'manual' CHECK (tier IN ('capital', 'manual')),
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at INTEGER NOT NULL,
+        UNIQUE(country_code, name, region)
+    )
+    """)
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS seed_queue_control (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        active INTEGER NOT NULL DEFAULT 0,
+        interval_seconds INTEGER NOT NULL DEFAULT 300,
+        next_run_at INTEGER,
+        updated_at INTEGER NOT NULL
+    )
+    """)
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS seed_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        seed_location_id INTEGER NOT NULL,
+        search_term TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        attempts INTEGER NOT NULL DEFAULT 0,
+        max_attempts INTEGER NOT NULL DEFAULT 3,
+        last_error TEXT,
+        places_found INTEGER,
+        places_saved INTEGER,
+        created_at INTEGER NOT NULL,
+        started_at INTEGER,
+        finished_at INTEGER,
+        UNIQUE(seed_location_id, search_term),
+        FOREIGN KEY(seed_location_id) REFERENCES seed_location(id)
+    )
+    """)
+
+    c.execute("""
+        INSERT OR IGNORE INTO seed_queue_control
+            (id, active, interval_seconds, next_run_at, updated_at)
+        VALUES (1, 0, 300, NULL, strftime('%s', 'now'))
+    """)
+
+    c.executemany(
+        """
+        INSERT OR IGNORE INTO seed_location
+            (country_code, name, region, tier, active, created_at)
+        VALUES (?, ?, ?, ?, 1, strftime('%s', 'now'))
+        """,
+        SEED_LOCATIONS,
+    )
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS google_places_usage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at INTEGER NOT NULL,
+        operation TEXT NOT NULL,
+        endpoint_version TEXT NOT NULL,
+        field_mask TEXT,
+        query TEXT,
+        seed_location_id INTEGER,
+        country_code TEXT,
+        directory_search_term TEXT,
+        result_count INTEGER,
+        status TEXT,
+        place_id TEXT,
+        FOREIGN KEY(seed_location_id) REFERENCES seed_location(id)
+    )
+    """)
+    c.execute("""
+    CREATE INDEX IF NOT EXISTS idx_google_places_usage_created_at
+    ON google_places_usage(created_at)
+    """)
+    c.execute("""
+    CREATE INDEX IF NOT EXISTS idx_google_places_usage_seed_location_id
+    ON google_places_usage(seed_location_id)
+    """)
+
     # Restricciones de integridad (26 de julio de 2026). El DELETE es
     # idempotente: solo borra algo la primera vez que se ejecuta contra
     # una base con duplicados históricos; en instalaciones ya limpias no
@@ -317,61 +403,88 @@ def get_or_create_search(query):
         lugares = buscar_lugares(query)
         c.execute("INSERT INTO search (query, query_hash) VALUES (?, ?)", (query, query_hash))
         search_id = c.lastrowid
-
-        from app.services.google_places import get_contact_and_location
-
-        details_delay = float(os.environ.get("GOOGLE_DETAILS_DELAY_SECONDS", "0.25"))
-
-        for lugar in lugares:
-            try:
-                details = get_contact_and_location(lugar["place_id"])
-            except Exception as exc:
-                # Un fallo puntual o un límite temporal no debe perder todos
-                # los resultados de la búsqueda. Conservamos los datos básicos
-                # y las coordenadas que ya devuelve Text Search.
-                location = lugar.get("geometry", {}).get("location", {})
-                details = {
-                    "latitude": location.get("lat"),
-                    "longitude": location.get("lng"),
-                }
-                logger.warning(f"Sin detalles para {lugar['place_id']}: {exc}")
-
-            c.execute("""
-                INSERT OR IGNORE INTO search_result (
-                    search_id, name, address, place_id, rating,
-                    postal_code, phone, website, country, country_code,
-                    region, province, municipality, city, district,
-                    latitude, longitude, email, email_source, business_status
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                search_id,
-                lugar["name"],
-                lugar.get("formatted_address", ""),
-                lugar["place_id"],
-                lugar.get("rating", 0),
-                details.get("postal_code", ""),
-                details.get("phone", ""),
-                details.get("website", ""),
-                details.get("country", ""),
-                details.get("country_code", ""),
-                details.get("region", ""),
-                details.get("province", ""),
-                details.get("municipality", ""),
-                details.get("city", ""),
-                details.get("district", ""),
-                details.get("latitude"),
-                details.get("longitude"),
-                details.get("email", ""),
-                details.get("email_source", ""),
-                details.get("business_status", ""),
-            ))
-            if details_delay > 0:
-                time.sleep(details_delay)
-
+        _insert_enriched_results(c, search_id, lugares)
         conn.commit()
         conn.close()
         return get_or_create_search(query)
+
+
+def _insert_enriched_results(cursor, search_id: int, lugares: list[dict]) -> None:
+    """Bucle de enriquecimiento (Details) + INSERT en search_result.
+    Extraído de get_or_create_search para poder reutilizarlo desde el
+    pipeline de siembra (seed_queue.py) con candidatos ya filtrados
+    (top-N), en vez de recibir siempre "hasta 20, todos" de buscar_lugares."""
+    from app.services.google_places import get_contact_and_location
+
+    details_delay = float(os.environ.get("GOOGLE_DETAILS_DELAY_SECONDS", "0.25"))
+
+    for lugar in lugares:
+        try:
+            details = get_contact_and_location(lugar["place_id"])
+        except Exception as exc:
+            # Un fallo puntual o un límite temporal no debe perder todos
+            # los resultados de la búsqueda. Conservamos los datos básicos
+            # y las coordenadas que ya devuelve Text Search.
+            location = lugar.get("geometry", {}).get("location", {})
+            details = {
+                "latitude": location.get("lat"),
+                "longitude": location.get("lng"),
+            }
+            logger.warning(f"Sin detalles para {lugar['place_id']}: {exc}")
+
+        cursor.execute("""
+            INSERT OR IGNORE INTO search_result (
+                search_id, name, address, place_id, rating,
+                postal_code, phone, website, country, country_code,
+                region, province, municipality, city, district,
+                latitude, longitude, email, email_source, business_status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            search_id,
+            lugar["name"],
+            lugar.get("formatted_address", ""),
+            lugar["place_id"],
+            lugar.get("rating", 0),
+            details.get("postal_code", ""),
+            details.get("phone", ""),
+            details.get("website", ""),
+            details.get("country", ""),
+            details.get("country_code", ""),
+            details.get("region", ""),
+            details.get("province", ""),
+            details.get("municipality", ""),
+            details.get("city", ""),
+            details.get("district", ""),
+            details.get("latitude"),
+            details.get("longitude"),
+            details.get("email", ""),
+            details.get("email_source", ""),
+            details.get("business_status", ""),
+        ))
+        if details_delay > 0:
+            time.sleep(details_delay)
+
+
+def get_or_create_search_with_candidates(query: str, lugares: list[dict]) -> list[dict]:
+    """Igual que get_or_create_search, pero recibe candidatos ya obtenidos
+    (Places API New + ranking top-N) en vez de llamar a buscar_lugares()
+    (Legacy). Usado por el pipeline de siembra (seed_queue.py). Si la
+    query ya existe en caché, se limita a devolverla -- no reinserta."""
+    query_hash = hash_query(query)
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT id FROM search WHERE query_hash = ?", (query_hash,))
+    if c.fetchone():
+        conn.close()
+        return get_or_create_search(query)
+
+    c.execute("INSERT INTO search (query, query_hash) VALUES (?, ?)", (query, query_hash))
+    search_id = c.lastrowid
+    _insert_enriched_results(c, search_id, lugares)
+    conn.commit()
+    conn.close()
+    return get_or_create_search(query)
 
 
 def save_search_result(place_id: str):
@@ -840,3 +953,63 @@ def get_all_images_for_place(place_id: str) -> list[str]:
     rows = c.fetchall()
     conn.close()
     return [r[0] for r in rows]
+
+
+def add_seed_location(
+    country_code: str, name: str, region: str | None = None, tier: str = "manual"
+) -> dict:
+    """Añade una ciudad semilla (ej. Manacor) sin tocar código -- ver
+    seed_queue.py. Idempotente: si ya existe (country_code, name, region),
+    no la duplica."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO seed_location
+            (country_code, name, region, tier, active, created_at)
+        VALUES (?, ?, ?, ?, 1, strftime('%s', 'now'))
+        """,
+        (country_code, name, region, tier),
+    )
+    conn.commit()
+    row = conn.execute(
+        """
+        SELECT id, country_code, name, region, tier, active, created_at
+        FROM seed_location
+        WHERE country_code = ? AND name = ? AND region IS ?
+        """,
+        (country_code, name, region),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else {}
+
+
+def list_seed_locations(country_code: str | None = None) -> list[dict]:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    sql = "SELECT id, country_code, name, region, tier, active, created_at FROM seed_location"
+    params: tuple = ()
+    if country_code:
+        sql += " WHERE country_code = ?"
+        params = (country_code,)
+    sql += " ORDER BY country_code, name"
+    rows = conn.execute(sql, params).fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def set_seed_location_active(location_id: int, active: bool) -> dict:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute(
+        "UPDATE seed_location SET active = ? WHERE id = ?",
+        (1 if active else 0, location_id),
+    )
+    conn.commit()
+    row = conn.execute(
+        "SELECT id, country_code, name, region, tier, active, created_at "
+        "FROM seed_location WHERE id = ?",
+        (location_id,),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else {}

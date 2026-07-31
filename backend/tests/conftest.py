@@ -9,7 +9,7 @@ import time
 import pytest
 
 from app.models import database
-from app.services import publication_queue, repair_queue
+from app.services import google_places_usage, publication_queue, repair_queue, seed_queue
 
 
 @pytest.fixture
@@ -20,6 +20,8 @@ def temp_db(tmp_path, monkeypatch):
     monkeypatch.setattr(database, "DB_PATH", db_path)
     monkeypatch.setattr(publication_queue, "DB_PATH", db_path)
     monkeypatch.setattr(repair_queue, "DB_PATH", db_path)
+    monkeypatch.setattr(seed_queue, "DB_PATH", db_path)
+    monkeypatch.setattr(google_places_usage, "DB_PATH", db_path)
 
     database.init_db()
     return db_path
@@ -103,3 +105,40 @@ def add_fake_image(connection: sqlite3.Connection, tmp_path, place_id: str) -> s
 
 def now() -> int:
     return int(time.time())
+
+
+def clear_seed_locations(connection: sqlite3.Connection) -> None:
+    """init_db() precarga 102 ciudades semilla reales (SEED_LOCATIONS); los
+    tests de seed_queue necesitan partir de un estado controlado, igual
+    que insert_place() parte de una tabla `place` vacía."""
+    connection.execute("DELETE FROM seed_location")
+    connection.commit()
+
+
+def insert_seed_location(
+    connection: sqlite3.Connection,
+    name: str,
+    country_code: str = "ES",
+    region: str | None = None,
+    tier: str = "manual",
+    active: int = 1,
+) -> int:
+    cursor = connection.execute(
+        """
+        INSERT INTO seed_location (country_code, name, region, tier, active, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (country_code, name, region, tier, active, now()),
+    )
+    connection.commit()
+    return cursor.lastrowid
+
+
+@pytest.fixture
+def make_seed_location(conn):
+    clear_seed_locations(conn)
+
+    def _make(name: str, **overrides):
+        return insert_seed_location(conn, name, **overrides)
+
+    return _make
